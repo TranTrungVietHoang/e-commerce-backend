@@ -1,4 +1,4 @@
-﻿package com.ecommerce.enums;
+package com.ecommerce.enums;
 
 public enum OrderStatus {
     PENDING,
@@ -9,4 +9,3 @@ public enum OrderStatus {
     CANCELLED,
     REFUNDED
 }
-

@@ -1,4 +1,4 @@
-﻿package com.ecommerce.enums;
+package com.ecommerce.enums;
 
 public enum ProductStatus {
     ACTIVE,
@@ -7,4 +7,3 @@ public enum ProductStatus {
     PENDING_APPROVAL,
     REJECTED
 }
-

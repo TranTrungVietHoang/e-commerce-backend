@@ -1,4 +1,4 @@
-﻿package com.ecommerce.enums;
+package com.ecommerce.enums;
 
 public enum ShopStatus {
     PENDING,
@@ -6,4 +6,3 @@ public enum ShopStatus {
     SUSPENDED,
     CLOSED
 }
-

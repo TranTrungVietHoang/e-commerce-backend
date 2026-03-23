@@ -1,4 +1,4 @@
-﻿package com.ecommerce.enums;
+package com.ecommerce.enums;
 
 public enum PaymentMethod {
     COD,
@@ -7,4 +7,3 @@ public enum PaymentMethod {
     CREDIT_CARD,
     BANK_TRANSFER
 }
-
