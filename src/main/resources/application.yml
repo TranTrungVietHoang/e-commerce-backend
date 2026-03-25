@@ -2,9 +2,10 @@ spring:
   application:
     name: e-commerce-backend
   datasource:
+    # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật (Dành cho Team)
     url: jdbc:sqlserver://localhost:1433;databaseName=ecommerce_marketplace;encrypt=true;trustServerCertificate=true
-    username: sa
-    password: YourPassword123
+    username: ${DB_USERNAME:sa} # Mặc định là sa nếu không cài đặt biến môi trường
+    password: ${DB_PASSWORD:}   # Mặc định để trống nếu không cài đặt biến môi trường
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   jpa:
     hibernate:
