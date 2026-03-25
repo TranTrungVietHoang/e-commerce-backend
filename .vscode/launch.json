@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "ECommerceApplication",
+            "request": "launch",
+            "mainClass": "com.ecommerce.ECommerceApplication",
+            "projectName": "e-commerce-backend",
+            "env": {
+                "DB_USERNAME": "sa",
+                "DB_PASSWORD": "123456"
+            }
+        }
+    ]
+}
