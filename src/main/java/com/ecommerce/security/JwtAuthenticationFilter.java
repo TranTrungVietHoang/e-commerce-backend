@@ -1,6 +1,5 @@
 package com.ecommerce.security;
 
-import com.ecommerce.exception.AppException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -86,12 +85,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     log.debug("Xác thực JWT thành công cho user: {}", email);
                 }
             }
-        } catch (AppException e) {
-            // Token hết hạn hoặc không hợp lệ → log và để SecurityContext trống
-            // Spring Security sẽ tự trả 401
-            log.warn("JWT không hợp lệ: {}", e.getMessage());
-            // Không ném exception ra ngoài filter, để chain tiếp tục
-            // AuthenticationEntryPoint của SecurityConfig sẽ xử lý 401
+        } catch (Exception e) {
+            // Catch toàn bộ lỗi parsing JWT (Malformed, Expired, ...) để tránh sập server (500)
+            log.warn("JWT không hợp lệ hoặc sai định dạng: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
