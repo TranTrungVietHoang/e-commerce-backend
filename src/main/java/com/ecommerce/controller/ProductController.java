@@ -2,8 +2,12 @@ package com.ecommerce.controller;
 
 import com.ecommerce.dto.request.product.CreateProductRequest;
 import com.ecommerce.dto.request.product.UpdateProductRequest;
+import com.ecommerce.dto.request.product.UpdateVariantStockRequest;
 import com.ecommerce.dto.response.ApiResponse;
+import com.ecommerce.dto.response.product.LowStockVariantResponse;
 import com.ecommerce.dto.response.product.ProductDetailResponse;
+import com.ecommerce.dto.response.product.ProductResponse;
+import com.ecommerce.dto.response.product.VariantResponse;
 import com.ecommerce.dto.response.product.ProductResponse;
 import com.ecommerce.service.ProductService;
 import jakarta.validation.Valid;
@@ -12,6 +16,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -58,5 +64,22 @@ public class ProductController {
             @RequestParam Long shopId) {
         productService.softDeleteProduct(id, shopId);
         return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    // Inventory APIs
+    @PatchMapping("/variants/{variantId}/stock")
+    public ResponseEntity<ApiResponse<VariantResponse>> updateVariantStock(
+            @PathVariable Long variantId,
+            @RequestParam Long shopId,
+            @Valid @RequestBody UpdateVariantStockRequest request) {
+        VariantResponse response = productService.updateVariantStock(variantId, request.getStock(), shopId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/low-stock")
+    public ResponseEntity<ApiResponse<List<LowStockVariantResponse>>> getLowStockVariants(
+            @RequestParam Long shopId) {
+        List<LowStockVariantResponse> response = productService.getLowStockVariants(shopId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

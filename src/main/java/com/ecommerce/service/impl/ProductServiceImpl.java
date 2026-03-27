@@ -3,6 +3,7 @@ package com.ecommerce.service.impl;
 import com.ecommerce.dto.request.product.CreateProductRequest;
 import com.ecommerce.dto.request.product.CreateVariantRequest;
 import com.ecommerce.dto.request.product.UpdateProductRequest;
+import com.ecommerce.dto.response.product.LowStockVariantResponse;
 import com.ecommerce.dto.response.product.ProductDetailResponse;
 import com.ecommerce.dto.response.product.ProductImageResponse;
 import com.ecommerce.dto.response.product.ProductResponse;
@@ -186,6 +187,52 @@ public class ProductServiceImpl implements ProductService {
         
         product.setStatus("DELETED");
         productRepository.save(product);
+    }
+
+    @Override
+    @Transactional
+    public VariantResponse updateVariantStock(Long variantId, int newStock, Long shopId) {
+        ProductVariant variant = productVariantRepository.findById(variantId)
+                .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", variantId));
+
+        Product product = variant.getProduct();
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new BusinessException("Không có quyền sửa tồn kho sản phẩm này");
+        }
+
+        variant.setStock(newStock);
+        productVariantRepository.save(variant);
+
+        // Recalculate total product stock
+        int totalStock = product.getVariants().stream()
+                .mapToInt(ProductVariant::getStock)
+                .sum();
+        product.setStockQuantity(totalStock);
+        productRepository.save(product);
+
+        VariantResponse res = new VariantResponse();
+        res.setId(variant.getId());
+        res.setSku(variant.getSku());
+        res.setAttributes(variant.getAttributes());
+        res.setPrice(variant.getPrice());
+        res.setStock(variant.getStock());
+        return res;
+    }
+
+    @Override
+    public List<LowStockVariantResponse> getLowStockVariants(Long shopId) {
+        List<ProductVariant> lowStockVariants = productVariantRepository.findByProduct_Shop_IdAndStock(shopId, 0);
+        
+        return lowStockVariants.stream().map(v -> {
+            LowStockVariantResponse res = new LowStockVariantResponse();
+            res.setVariantId(v.getId());
+            res.setSku(v.getSku());
+            res.setAttributes(v.getAttributes());
+            res.setStock(v.getStock());
+            res.setProductId(v.getProduct().getId());
+            res.setProductName(v.getProduct().getName());
+            return res;
+        }).collect(Collectors.toList());
     }
 
     // Helper methods for mapping

@@ -12,4 +12,8 @@ public interface ProductService {
     ProductDetailResponse getProductById(Long id);
     ProductDetailResponse updateProduct(Long id, UpdateProductRequest req, Long shopId);
     void softDeleteProduct(Long id, Long shopId);
+    
+    // Inventory methods
+    com.ecommerce.dto.response.product.VariantResponse updateVariantStock(Long variantId, int newStock, Long shopId);
+    java.util.List<com.ecommerce.dto.response.product.LowStockVariantResponse> getLowStockVariants(Long shopId);
 }
