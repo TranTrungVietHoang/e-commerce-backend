@@ -2,10 +2,10 @@ spring:
   application:
     name: e-commerce-backend
   datasource:
-    # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật (Dành cho Team)
-    url: jdbc:sqlserver://localhost:1433;databaseName=ecommerce_marketplace;encrypt=true;trustServerCertificate=true
-    username: ${DB_USERNAME:sa} # Mặc định là sa nếu không cài đặt biến môi trường
-    password: ${DB_PASSWORD:}   # Mặc định để trống nếu không cài đặt biến môi trường
+    # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật
+    url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:ecommerce_marketplace};encrypt=true;trustServerCertificate=true
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:new_password}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   jpa:
     hibernate:
@@ -15,6 +15,15 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: true
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 server:
   port: 8080
