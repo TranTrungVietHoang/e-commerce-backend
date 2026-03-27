@@ -4,11 +4,13 @@ spring:
   datasource:
     # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật (Dành cho Team)
     url: jdbc:sqlserver://localhost:1433;databaseName=ecommerce_marketplace;encrypt=true;trustServerCertificate=true
-    username: ${DB_USERNAME:sa} # Mặc định là sa nếu không cài đặt biến môi trường
-    password: ${DB_PASSWORD:}   # Mặc định để trống nếu không cài đặt biến môi trường
+    username: ${DB_USERNAME:sa}  # Mặc định là sa nếu không cài đặt biến môi trường
+    password: ${DB_PASSWORD:}    # Mặc định để trống nếu không cài đặt biến môi trường
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   jpa:
     hibernate:
+      # validate: chỉ kiểm tra schema, không tự thay đổi DB → an toàn hơn "update"
+      # update: dùng khi dev (tự tạo/sửa bảng theo entity)
       ddl-auto: update
     show-sql: true
     properties:
@@ -22,3 +24,14 @@ server:
 logging:
   level:
     com.ecommerce: DEBUG
+
+# =============================================================
+# JWT Configuration
+# Secret phải là chuỗi Base64, >= 256 bits (32 bytes)
+# Sinh secret ngẫu nhiên: openssl rand -base64 64
+# =============================================================
+jwt:
+  secret: ${JWT_SECRET:bXktc2VjcmV0LWtleS1mb3ItZWNvbW1lcmNlLW1hcmtldHBsYWNlLXByb2plY3QtMjAyNg==}
+  expiration:
+    access: 900000        # 15 phút (milliseconds)
+    refresh: 604800000    # 7 ngày  (milliseconds)
