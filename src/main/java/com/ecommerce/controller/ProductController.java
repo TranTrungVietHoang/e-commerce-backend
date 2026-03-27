@@ -8,7 +8,6 @@ import com.ecommerce.dto.response.product.LowStockVariantResponse;
 import com.ecommerce.dto.response.product.ProductDetailResponse;
 import com.ecommerce.dto.response.product.ProductResponse;
 import com.ecommerce.dto.response.product.VariantResponse;
-import com.ecommerce.dto.response.product.ProductResponse;
 import com.ecommerce.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +24,17 @@ import java.util.List;
 public class ProductController {
 
     private final ProductService productService;
+    private final com.ecommerce.service.FileService fileService;
+
+    @PostMapping("/upload")
+    public ResponseEntity<ApiResponse<?>> uploadImage(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        try {
+            String url = fileService.uploadFile(file);
+            return ResponseEntity.ok(ApiResponse.success(url));
+        } catch (java.io.IOException e) {
+            return new ResponseEntity<>(ApiResponse.error(500, "Lỗi upload ảnh: " + e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<ProductDetailResponse>> createProduct(
