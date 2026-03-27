@@ -143,9 +143,10 @@ public class ProductServiceImpl implements ProductService {
             product.setBasePrice(req.getBasePrice());
         }
 
-        // Xử lý images (Xóa cũ, thay mới)
+        // Xử lý images (Xóa cũ, Flush để DB nhận lệnh xóa, thay mới)
         if (req.getImageUrls() != null && !req.getImageUrls().isEmpty()) {
             product.getImages().clear();
+            productRepository.saveAndFlush(product); // Force flush deletes
             for (int i = 0; i < req.getImageUrls().size(); i++) {
                 ProductImage image = new ProductImage();
                 image.setProduct(product);
@@ -155,9 +156,10 @@ public class ProductServiceImpl implements ProductService {
             }
         }
 
-        // Xử lý variants (Xóa cũ, thay mới)
+        // Xử lý variants (Xóa cũ, Flush để DB nhận lệnh xóa, chèn mới)
         if (req.getVariants() != null) {
             product.getVariants().clear();
+            productRepository.saveAndFlush(product); // Force flush deletes before inserting new SKU
             int totalStock = 0;
             for (CreateVariantRequest vReq : req.getVariants()) {
                 ProductVariant variant = new ProductVariant();
