@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Normalizer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -34,7 +33,6 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final ShopRepository shopRepository;
     private final CategoryRepository categoryRepository;
-    private final ProductImageRepository productImageRepository;
     private final ProductVariantRepository productVariantRepository;
 
     @Override
@@ -96,6 +94,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ProductResponse> getShopProducts(Long shopId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         // Lấy danh sách sản phẩm của shop, không bao gồm DELETED
@@ -220,8 +219,10 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<LowStockVariantResponse> getLowStockVariants(Long shopId) {
-        List<ProductVariant> lowStockVariants = productVariantRepository.findByProduct_Shop_IdAndStock(shopId, 0);
+        // Cảnh báo những sản phẩm có kho < 10
+        List<ProductVariant> lowStockVariants = productVariantRepository.findByProduct_Shop_IdAndStockLessThan(shopId, 10);
         
         return lowStockVariants.stream().map(v -> {
             LowStockVariantResponse res = new LowStockVariantResponse();
