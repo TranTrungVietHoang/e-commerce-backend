@@ -1,7 +1,6 @@
 package com.ecommerce.security;
 
 import com.ecommerce.exception.AppException;
-import com.ecommerce.exception.ErrorCode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

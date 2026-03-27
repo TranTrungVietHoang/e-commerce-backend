@@ -9,9 +9,8 @@ spring:
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   jpa:
     hibernate:
-      # validate: chỉ kiểm tra schema, không tự thay đổi DB → an toàn hơn "update"
-      # update: dùng khi dev (tự tạo/sửa bảng theo entity)
-      ddl-auto: update
+      # Tắt ddl-auto do database đã được tạo chuẩn từ init.sql
+      ddl-auto: none
     show-sql: true
     properties:
       hibernate:

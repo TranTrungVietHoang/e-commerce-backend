@@ -1,5 +1,7 @@
 package com.ecommerce.config;
 
+import com.ecommerce.security.CustomAccessDeniedHandler;
+import com.ecommerce.security.CustomAuthenticationEntryPoint;
 import com.ecommerce.security.JwtAuthenticationFilter;
 import com.ecommerce.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +46,8 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final UserDetailsServiceImpl userDetailsService;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
     /**
      * Định nghĩa luật bảo mật cho từng endpoint.
@@ -85,6 +89,12 @@ public class SecurityConfig {
 
                         // ── AUTHENTICATED ───────────────────────────────
                         .anyRequest().authenticated()
+                )
+
+                // 4. Ngoại lệ bảo mật (401, 403) từ tầng Filter
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
+                        .accessDeniedHandler(customAccessDeniedHandler)
                 )
 
                 // 5. Dùng AuthenticationProvider (DaoAuthenticationProvider)
