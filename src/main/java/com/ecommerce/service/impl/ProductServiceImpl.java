@@ -8,6 +8,18 @@ import com.ecommerce.dto.response.product.ProductDetailResponse;
 import com.ecommerce.dto.response.product.ProductImageResponse;
 import com.ecommerce.dto.response.product.ProductResponse;
 import com.ecommerce.dto.response.product.VariantResponse;
+import com.ecommerce.entity.Category;
+import com.ecommerce.entity.Product;
+import com.ecommerce.entity.ProductImage;
+import com.ecommerce.entity.ProductVariant;
+import com.ecommerce.entity.Shop;
+import com.ecommerce.exception.BusinessException;
+import com.ecommerce.exception.ResourceNotFoundException;
+import com.ecommerce.repository.CartItemRepository;
+import com.ecommerce.repository.CategoryRepository;
+import com.ecommerce.repository.ProductRepository;
+import com.ecommerce.repository.ProductVariantRepository;
+import com.ecommerce.repository.ShopRepository;
 import com.ecommerce.entity.*;
 import com.ecommerce.exception.BusinessException;
 import com.ecommerce.exception.ResourceNotFoundException;
@@ -21,8 +33,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.text.Normalizer;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.text.Normalizer;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -34,6 +51,7 @@ public class ProductServiceImpl implements ProductService {
     private final ShopRepository shopRepository;
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final CartItemRepository cartItemRepository;
 
     @Override
     @Transactional
@@ -50,6 +68,17 @@ public class ProductServiceImpl implements ProductService {
         product.setName(req.getName());
         product.setDescription(req.getDescription());
         product.setBasePrice(req.getBasePrice());
+        product.setStatus(normalizeStatus(req.getStatus(), "ACTIVE"));
+        applyFlashSale(product, req.getFlashSaleEnabled(), req.getFlashSalePrice(), req.getFlashSaleStartAt(), req.getFlashSaleEndAt());
+        product.setSlug(generateSlug(req.getName()) + "-" + System.currentTimeMillis());
+
+        product = productRepository.save(product);
+        product.setSlug(generateSlug(req.getName()) + "-" + product.getId());
+
+        replaceImages(product, req.getImageUrls());
+        upsertVariants(product, req.getVariants(), false);
+
+        product = productRepository.save(product);
         
         // Auto-gen temporary slug
         product.setSlug(generateSlug(req.getName()) + "-" + System.currentTimeMillis());
@@ -93,6 +122,7 @@ public class ProductServiceImpl implements ProductService {
         return mapToDetailResponse(product);
     }
 
+   // Method lấy sản phẩm của shop (Lấy từ develop cho có comment)
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponse> getShopProducts(Long shopId, int page, int size) {
@@ -102,7 +132,18 @@ public class ProductServiceImpl implements ProductService {
         return products.map(this::mapToResponse);
     }
 
+    // Giữ lại method này từ nhánh của bạn (Bắt buộc để không lỗi Interface)
     @Override
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getPublicProducts() {
+        return productRepository.findAllActiveProducts().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    // Method lấy chi tiết sản phẩm (Giữ bản có @Transactional của bạn cho an toàn)
+    @Override
+    @Transactional(readOnly = true)
     public ProductDetailResponse getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
@@ -110,18 +151,17 @@ public class ProductServiceImpl implements ProductService {
         if ("DELETED".equals(product.getStatus())) {
             throw new ResourceNotFoundException("Product", id);
         }
-        
-        return mapToDetailResponse(product);
+        return mapToResponseDetail(product); // Đảm bảo dùng đúng method map cho detail
     }
 
-    @Override
+   @Override
     @Transactional
     public ProductDetailResponse updateProduct(Long id, UpdateProductRequest req, Long shopId) {
         Product product = productRepository.findByIdAndShopId(id, shopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
 
         if ("DELETED".equals(product.getStatus())) {
-            throw new BusinessException("Sản phẩm đã bị xóa");
+            throw new BusinessException("San pham da bi xoa");
         }
 
         if (req.getCategoryId() != null) {
@@ -141,6 +181,20 @@ public class ProductServiceImpl implements ProductService {
 
         if (req.getBasePrice() != null) {
             product.setBasePrice(req.getBasePrice());
+        }
+
+        if (req.getStatus() != null) {
+            product.setStatus(normalizeStatus(req.getStatus(), product.getStatus()));
+        }
+
+        if (req.getFlashSaleEnabled() != null || req.getFlashSalePrice() != null || req.getFlashSaleStartAt() != null || req.getFlashSaleEndAt() != null) {
+            applyFlashSale(
+                    product,
+                    req.getFlashSaleEnabled() != null ? req.getFlashSaleEnabled() : product.getFlashSaleEnabled(),
+                    req.getFlashSalePrice() != null ? req.getFlashSalePrice() : product.getFlashSalePrice(),
+                    req.getFlashSaleStartAt() != null ? req.getFlashSaleStartAt() : product.getFlashSaleStartAt(),
+                    req.getFlashSaleEndAt() != null ? req.getFlashSaleEndAt() : product.getFlashSaleEndAt()
+            );
         }
 
         // Xử lý images (Xóa cũ, Flush để DB nhận lệnh xóa, thay mới)
@@ -187,12 +241,20 @@ public class ProductServiceImpl implements ProductService {
         product.setStatus("DELETED");
         productRepository.save(product);
     }
-
+        
     @Override
     @Transactional
     public VariantResponse updateVariantStock(Long variantId, int newStock, Long shopId) {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", variantId));
+        Product product = variant.getProduct();
+        if (!product.getShop().getId().equals(shopId)) {
+            throw new BusinessException("Khong co quyen sua ton kho san pham nay");
+        }
+        variant.setStock(newStock);
+        productVariantRepository.save(variant);
+        recalculateProductStock(product);
+        return mapVariant(variant);
 
         Product product = variant.getProduct();
         if (!product.getShop().getId().equals(shopId)) {
@@ -221,6 +283,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public List<LowStockVariantResponse> getLowStockVariants(Long shopId) {
+        return productVariantRepository.findByProduct_Shop_IdAndStockLessThan(shopId, 10).stream().map(v -> {
         // Cảnh báo những sản phẩm có kho < 10
         List<ProductVariant> lowStockVariants = productVariantRepository.findByProduct_Shop_IdAndStockLessThan(shopId, 10);
         
@@ -236,36 +299,68 @@ public class ProductServiceImpl implements ProductService {
         }).collect(Collectors.toList());
     }
 
-    // Helper methods for mapping
-    private ProductResponse mapToResponse(Product product) {
-        ProductResponse res = new ProductResponse();
-        res.setId(product.getId());
-        res.setName(product.getName());
-        res.setBasePrice(product.getBasePrice());
-        
-        // Find primary image
-        String primaryImg = product.getImages().stream()
-                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
-                .map(ProductImage::getImageUrl)
-                .findFirst()
-                .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
-                
-        res.setPrimaryImageUrl(primaryImg);
-        res.setStockQuantity(product.getStockQuantity());
-        res.setStatus(product.getStatus());
-        res.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);
-        res.setRating(product.getRating());
-        res.setSoldCount(product.getSoldCount());
-        res.setCreatedAt(product.getCreatedAt());
-        return res;
+    private void replaceImages(Product product, List<String> imageUrls) {
+        product.getImages().clear();
+        productRepository.saveAndFlush(product);
+        for (int i = 0; i < imageUrls.size(); i++) {
+            ProductImage image = new ProductImage();
+            image.setProduct(product);
+            image.setImageUrl(imageUrls.get(i));
+            image.setIsPrimary(i == 0);
+            product.getImages().add(image);
+        }
     }
 
-    private ProductDetailResponse mapToDetailResponse(Product product) {
+    private void upsertVariants(Product product, List<CreateVariantRequest> requests, boolean validateRemoval) {
+        Set<Long> incomingIds = requests.stream()
+                .map(CreateVariantRequest::getId)
+                .filter(id -> id != null && id > 0)
+                .collect(Collectors.toSet());
+
+        if (validateRemoval) {
+            for (ProductVariant existing : product.getVariants()) {
+                if (!incomingIds.contains(existing.getId())) {
+                    validateVariantCanBeRemoved(existing.getId());
+                }
+            }
+        }
+
+        List<ProductVariant> currentVariants = product.getVariants();
+        Set<Long> currentIds = currentVariants.stream()
+                .map(ProductVariant::getId)
+                .collect(Collectors.toSet());
+
+        currentVariants.removeIf(existing -> existing.getId() != null && !incomingIds.contains(existing.getId()));
+
+        for (CreateVariantRequest request : requests) {
+            ProductVariant variant;
+            if (request.getId() != null && currentIds.contains(request.getId())) {
+                variant = currentVariants.stream()
+                        .filter(item -> request.getId().equals(item.getId()))
+                        .findFirst()
+                        .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", request.getId()));
+            } else {
+                variant = new ProductVariant();
+                variant.setProduct(product);
+                currentVariants.add(variant);
+            }
+
+            variant.setAttributes(request.getAttributes());
+            variant.setPrice(request.getPrice());
+            variant.setStock(request.getStock() != null ? request.getStock() : 0);
+            variant.setSku(request.getSku());
+        }
+
+        recalculateProductStock(product);
+    }
+
+private ProductDetailResponse mapToDetailResponse(Product product) {
         ProductDetailResponse res = new ProductDetailResponse();
         res.setId(product.getId());
         res.setName(product.getName());
         res.setBasePrice(product.getBasePrice());
         
+        // Giữ nguyên logic xử lý ảnh chính của bạn
         String primaryImg = product.getImages().stream()
                 .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
                 .map(ProductImage::getImageUrl)
@@ -279,40 +374,100 @@ public class ProductServiceImpl implements ProductService {
         res.setRating(product.getRating());
         res.setSoldCount(product.getSoldCount());
         res.setCreatedAt(product.getCreatedAt());
-        
+        res.setEffectivePrice(resolveEffectivePrice(product));
+        res.setFlashSaleActive(isFlashSaleActive(product));
+        res.setFlashSalePrice(product.getFlashSalePrice());
+        res.setFlashSaleStartAt(product.getFlashSaleStartAt());
+        res.setFlashSaleEndAt(product.getFlashSaleEndAt());
         res.setDescription(product.getDescription());
+        res.setCategoryId(product.getCategory() != null ? product.getCategory().getId() : null);
         res.setSlug(product.getSlug());
         res.setShopId(product.getShop().getId());
         res.setShopName(product.getShop().getName());
         
-        List<ProductImageResponse> imgRes = product.getImages().stream().map(img -> {
-            ProductImageResponse pir = new ProductImageResponse();
-            pir.setId(img.getId());
-            pir.setImageUrl(img.getImageUrl());
-            pir.setIsPrimary(img.getIsPrimary());
-            return pir;
-        }).collect(Collectors.toList());
-        res.setImages(imgRes);
+        res.setImages(product.getImages().stream().map(img -> {
+            ProductImageResponse imageResponse = new ProductImageResponse();
+            imageResponse.setId(img.getId());
+            imageResponse.setImageUrl(img.getImageUrl());
+            imageResponse.setIsPrimary(img.getIsPrimary());
+            return imageResponse;
+        }).collect(Collectors.toList()));
         
-        List<VariantResponse> varRes = product.getVariants().stream().map(v -> {
-            VariantResponse vr = new VariantResponse();
-            vr.setId(v.getId());
-            vr.setSku(v.getSku());
-            vr.setAttributes(v.getAttributes());
-            vr.setPrice(v.getPrice());
-            vr.setStock(v.getStock());
-            return vr;
-        }).collect(Collectors.toList());
-        res.setVariants(varRes);
+        res.setVariants(product.getVariants().stream().map(this::mapVariant).collect(Collectors.toList()));
         
         return res;
     }
 
+    private VariantResponse mapVariant(ProductVariant variant) {
+        VariantResponse res = new VariantResponse();
+        res.setId(variant.getId());
+        res.setSku(variant.getSku());
+        res.setAttributes(variant.getAttributes());
+        res.setPrice(variant.getPrice());
+        res.setStock(variant.getStock());
+        return res;
+    }
+
+    private void applyFlashSale(Product product, Boolean enabled, BigDecimal price, LocalDateTime startAt, LocalDateTime endAt) {
+        boolean flashSaleEnabled = Boolean.TRUE.equals(enabled);
+        if (!flashSaleEnabled) {
+            product.setFlashSaleEnabled(false);
+            product.setFlashSalePrice(null);
+            product.setFlashSaleStartAt(null);
+            product.setFlashSaleEndAt(null);
+            return;
+        }
+        if (price == null) {
+            throw new BusinessException("Flash sale can gia khuyen mai");
+        }
+        if (startAt == null || endAt == null) {
+            throw new BusinessException("Flash sale can thoi gian bat dau va ket thuc");
+        }
+        if (!endAt.isAfter(startAt)) {
+            throw new BusinessException("Thoi gian ket thuc flash sale phai sau thoi gian bat dau");
+        }
+        if (price.compareTo(product.getBasePrice()) >= 0) {
+            throw new BusinessException("Gia flash sale phai nho hon gia goc");
+        }
+        product.setFlashSaleEnabled(true);
+        product.setFlashSalePrice(price);
+        product.setFlashSaleStartAt(startAt);
+        product.setFlashSaleEndAt(endAt);
+    }
+
+    private String normalizeStatus(String status, String fallback) {
+        String normalized = status == null || status.isBlank() ? fallback : status.trim().toUpperCase(Locale.ROOT);
+        if (!normalized.equals("ACTIVE") && !normalized.equals("INACTIVE") && !normalized.equals("DELETED")) {
+            throw new BusinessException("Status san pham khong hop le");
+        }
+        return normalized;
+    }
+
+    private boolean isFlashSaleActive(Product product) {
+        LocalDateTime now = LocalDateTime.now();
+        return Boolean.TRUE.equals(product.getFlashSaleEnabled())
+                && product.getFlashSalePrice() != null
+                && product.getFlashSaleStartAt() != null
+                && product.getFlashSaleEndAt() != null
+                && !now.isBefore(product.getFlashSaleStartAt())
+                && now.isBefore(product.getFlashSaleEndAt());
+    }
+
+    private BigDecimal resolveEffectivePrice(Product product) {
+        return isFlashSaleActive(product) ? product.getFlashSalePrice() : product.getBasePrice();
+    }
+
+    private String resolvePrimaryImage(Product product) {
+        return product.getImages().stream()
+                .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
+                .map(ProductImage::getImageUrl)
+                .findFirst()
+                .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
+    }
     private String generateSlug(String input) {
         String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
         Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
         String slug = pattern.matcher(normalized).replaceAll("").toLowerCase();
-        slug = slug.replaceAll("[^a-z0-9\\s]", "").replaceAll("\\s+", "-");
-        return slug;
+        return slug.replaceAll("[^a-z0-9\\s]", "").replaceAll("\\s+", "-");
     }
 }

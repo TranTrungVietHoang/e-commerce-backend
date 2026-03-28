@@ -1,6 +1,7 @@
 package com.ecommerce.dto.response.product;
 
 import lombok.Data;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -16,4 +17,9 @@ public class ProductResponse {
     private BigDecimal rating;
     private Long soldCount;
     private LocalDateTime createdAt;
+    private BigDecimal effectivePrice;
+    private Boolean flashSaleActive;
+    private BigDecimal flashSalePrice;
+    private LocalDateTime flashSaleStartAt;
+    private LocalDateTime flashSaleEndAt;
 }
