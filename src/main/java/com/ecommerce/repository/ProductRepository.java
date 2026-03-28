@@ -19,6 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' ORDER BY p.createdAt DESC")
     List<Product> findAllActiveProducts();
 
+    
     Optional<Product> findByIdAndShopId(Long id, Long shopId);
     Optional<Product> findBySlug(String slug);
 }

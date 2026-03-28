@@ -20,6 +20,14 @@ public class CreateVariantRequest {
     private BigDecimal price;
 
     @Min(value = 0, message = "Kho khong duoc am")
+    @NotBlank(message = "Thuộc tính biến thể không được để trống")
+    private String attributes; // JSON: {"Màu":"Đỏ","Size":"L"}
+
+    @NotNull(message = "Giá biến thể không được để trống")
+    @DecimalMin(value = "0.0", inclusive = false, message = "Giá biến thể phải lớn hơn 0")
+    private BigDecimal price;
+
+    @Min(value = 0, message = "Kho không được âm")
     private Integer stock;
 
     private String sku;
