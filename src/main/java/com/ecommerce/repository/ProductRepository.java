@@ -18,6 +18,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("SELECT p FROM Product p WHERE p.shop.id = :shopId AND (p.status IS NULL OR p.status <> :status)")
     Page<Product> findByShopIdAndStatusNot(@Param("shopId") Long shopId, @Param("status") String status, Pageable pageable);
 
+    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' ORDER BY p.createdAt DESC")
+    List<Product> findAllActiveProducts();
+
     Optional<Product> findByIdAndShopId(Long id, Long shopId);
     Optional<Product> findBySlug(String slug);
 

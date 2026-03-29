@@ -53,6 +53,11 @@ public class ProductController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
+    @GetMapping("/public")
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getPublicProducts() {
+        return ResponseEntity.ok(ApiResponse.success(productService.getPublicProducts()));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<ProductDetailResponse>> getProductById(@PathVariable Long id) {
         ProductDetailResponse response = productService.getProductById(id);

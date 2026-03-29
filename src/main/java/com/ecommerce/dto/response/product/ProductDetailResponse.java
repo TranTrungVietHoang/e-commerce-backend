@@ -7,6 +7,7 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class ProductDetailResponse extends ProductResponse {
+    private Integer categoryId;
     private String description;
     private String slug;
     private Long shopId;
