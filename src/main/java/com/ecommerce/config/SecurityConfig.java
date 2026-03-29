@@ -29,13 +29,13 @@ import java.util.List;
 
 /**
  * Cấu hình bảo mật trung tâm của hệ thống.
- * 
+ *
  * @EnableWebSecurity: Kích hoạt Spring Security.
  * @EnableMethodSecurity: Cho phép dùng @PreAuthorize, @Secured trên method.
- * 
+ *
  * KIẾN TRÚC BẢO MẬT:
  *   Request → CORS → JwtAuthenticationFilter → SecurityFilterChain → Controller
- * 
+ *
  * STATELESS: Không dùng session/cookie → mọi request phải kèm token.
  */
 @Configuration
@@ -51,7 +51,7 @@ public class SecurityConfig {
 
     /**
      * Định nghĩa luật bảo mật cho từng endpoint.
-     * 
+     *
      * LUẬT PHÂN QUYỀN (từ cụ thể → chung):
      *   /api/v1/auth/**     → Public (không cần token)
      *   GET /products/**    → Public (khách vãng lai xem sản phẩm)
@@ -91,25 +91,21 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                // 4. Ngoại lệ bảo mật (401, 403) từ tầng Filter
+                // 5. Ngoại lệ bảo mật (401, 403) từ tầng Filter
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                         .accessDeniedHandler(customAccessDeniedHandler)
                 )
 
-                // 5. Dùng AuthenticationProvider (DaoAuthenticationProvider)
+                // 6. Dùng AuthenticationProvider (DaoAuthenticationProvider)
                 .authenticationProvider(authenticationProvider())
 
-                // 6. Đặt JwtFilter TRƯỚC filter xác thực mặc định của Spring
+                // 7. Đặt JwtFilter TRƯỚC filter xác thực mặc định của Spring
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    /**
-     * AuthenticationProvider: kết nối với UserDetailsService và PasswordEncoder.
-     * authenticationManager.authenticate() sẽ dùng bean này.
-     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
@@ -118,47 +114,27 @@ public class SecurityConfig {
         return provider;
     }
 
-    /**
-     * AuthenticationManager: dùng trong AuthService khi xử lý Login.
-     * AuthService.login() → authManager.authenticate() → provider.authenticate()
-     *   → userDetailsService.loadUserByUsername() → so sánh password với BCrypt.
-     */
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration authenticationConfiguration) throws Exception {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
-    /**
-     * BCrypt PasswordEncoder — thuật toán băm mật khẩu tiêu chuẩn.
-     * Strength mặc định = 10 (cost factor): cân bằng giữa bảo mật và performance.
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * Cấu hình CORS: cho phép FE (localhost:3000) gọi API.
-     * Production: thay localhost:3000 bằng tên miền thật.
-     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Origins được phép (FE dev + FE prod)
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "http://localhost:5173" // Vite default port
+                "http://localhost:5173"
         ));
-
-        // HTTP methods được phép
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-
-        // Headers được phép gửi lên
         configuration.setAllowedHeaders(List.of("*"));
-
-        // Cho phép gửi credentials (token trong Authorization header)
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

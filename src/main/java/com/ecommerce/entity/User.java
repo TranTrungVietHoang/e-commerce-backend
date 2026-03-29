@@ -14,12 +14,12 @@ import java.util.stream.Collectors;
 
 /**
  * Ánh xạ bảng "users" trong DB.
- * 
+ *
  * TRIỂN KHAI UserDetails của Spring Security:
  *   → Spring Security dùng interface này để lấy thông tin user khi authenticate.
  *   → getAuthorities(): convert Set<Role> → Set<GrantedAuthority> để Security biết quyền.
  *   → isAccountNonLocked(): kiểm tra status == ACTIVE.
- * 
+ *
  * LƯU Ý QUAN TRỌNG:
  *   - Tên cột "password_hash" trong DB ánh xạ vào field "password" (UserDetails).
  *   - KHÔNG map field "passwordHash" vì sẽ conflict với getPassword() của UserDetails.
@@ -69,7 +69,7 @@ public class User implements UserDetails {
     /**
      * EAGER fetch: phải load roles ngay khi load User
      * vì Spring Security cần roles để kiểm tra quyền trong filter.
-     * 
+     *
      * Bảng join: user_roles (user_id, role_id)
      */
     @ManyToMany(fetch = FetchType.EAGER)
@@ -121,7 +121,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true; // Tài khoản không có khái niệm hết hạn trong hệ thống này
+        return true;
     }
 
     /**

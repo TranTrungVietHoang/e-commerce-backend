@@ -24,7 +24,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /**
      * Tìm kiếm user cho Admin dashboard.
      * Tìm theo email HOẶC fullName (case-insensitive), lọc theo status.
-     * 
+     *
      * @param keyword từ khóa tìm kiếm (null = không lọc)
      * @param status  trạng thái tài khoản (null = hiển thị tất cả)
      */

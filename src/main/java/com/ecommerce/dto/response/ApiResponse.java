@@ -8,14 +8,13 @@ import lombok.NoArgsConstructor;
 
 /**
  * Lớp bọc chuẩn cho MỌI API response trong hệ thống.
- * 
+ *
  * FE đọc field "code" để phân loại kết quả:
  *   200 → Thành công, đọc "result"
  *   4xx → Lỗi client, hiển thị "message"
  *   5xx → Lỗi server
- * 
+ *
  * @JsonInclude(NON_NULL): Không trả về field "result" nếu nó null
- *   → Response lỗi sẽ gọn hơn, không có "result: null"
  */
 @Data
 @Builder
@@ -28,10 +27,7 @@ public class ApiResponse<T> {
     private String message; // Thông báo hiển thị cho người dùng
     private T result;       // Dữ liệu thực tế (null nếu là response lỗi)
 
-    /**
-     * Factory method — tạo response thành công nhanh.
-     * Ví dụ: return ApiResponse.success(userDto);
-     */
+    /** Thành công với message mặc định */
     public static <T> ApiResponse<T> success(T data) {
         return ApiResponse.<T>builder()
                 .code(200)
@@ -40,14 +36,30 @@ public class ApiResponse<T> {
                 .build();
     }
 
-    /**
-     * Factory method — tạo response thành công với message tùy chỉnh.
-     */
+    /** Thành công với message tùy chỉnh */
     public static <T> ApiResponse<T> success(T data, String message) {
         return ApiResponse.<T>builder()
                 .code(200)
                 .message(message)
                 .result(data)
+                .build();
+    }
+
+    /** Tạo resource mới thành công (201) */
+    public static <T> ApiResponse<T> created(T data) {
+        return ApiResponse.<T>builder()
+                .code(201)
+                .message("Tạo thành công")
+                .result(data)
+                .build();
+    }
+
+    /** Response lỗi với code và message tùy chỉnh */
+    public static ApiResponse<Void> error(int code, String msg) {
+        return ApiResponse.<Void>builder()
+                .code(code)
+                .message(msg)
+                .result(null)
                 .build();
     }
 }

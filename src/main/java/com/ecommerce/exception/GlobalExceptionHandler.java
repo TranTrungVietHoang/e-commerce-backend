@@ -16,10 +16,10 @@ import java.util.Map;
 
 /**
  * Xử lý lỗi tập trung cho toàn bộ hệ thống.
- * 
+ *
  * Mọi exception từ Controller/Service đều được bắt tại đây,
  * đảm bảo FE luôn nhận được cùng một cấu trúc ApiResponse.
- * 
+ *
  * THỨ TỰ BẮT LỖI (từ cụ thể → chung):
  *   1. MethodArgumentNotValidException (validation @Valid)
  *   2. AppException (lỗi nghiệp vụ tùy chỉnh)
@@ -32,8 +32,7 @@ public class GlobalExceptionHandler {
 
     /**
      * Bắt lỗi validation từ @Valid trên RequestBody.
-     * Trả về danh sách tất cả field bị lỗi để FE hiễn thị.
-     * Ví dụ: { "email": "Email không đúng định dạng", "password": "Mật khẩu quá ngắn" }
+     * Trả về danh sách tất cả field bị lỗi để FE hiển thị.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidationException(
@@ -55,7 +54,6 @@ public class GlobalExceptionHandler {
 
     /**
      * Bắt lỗi nghiệp vụ từ AppException.
-     * Đây là exception phổ biến nhất trong hệ thống.
      */
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ApiResponse<Void>> handleAppException(AppException ex) {
@@ -72,7 +70,6 @@ public class GlobalExceptionHandler {
 
     /**
      * Bắt lỗi quyền truy cập (403 Forbidden).
-     * Ví dụ: CUSTOMER cố truy cập endpoint của ADMIN.
      */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDeniedException(AccessDeniedException ex) {
@@ -87,7 +84,6 @@ public class GlobalExceptionHandler {
 
     /**
      * Bắt lỗi xác thực Spring Security (401 Unauthorized).
-     * Ví dụ: Token sai, hết hạn (ngoài JwtFilter).
      */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException ex) {
@@ -102,11 +98,9 @@ public class GlobalExceptionHandler {
 
     /**
      * Fallback: bắt mọi lỗi không lường trước được.
-     * Log lại để debug, không để lộ stack trace cho FE.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception ex) {
-        // In ra console để dev debug, không trả về FE
         ex.printStackTrace();
 
         ApiResponse<Void> response = ApiResponse.<Void>builder()
