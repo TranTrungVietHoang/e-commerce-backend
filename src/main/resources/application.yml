@@ -2,11 +2,13 @@ spring:
   application:
     name: e-commerce-backend
   datasource:
-    # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật
+    # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật (Dành cho Team)
+    # Hỗ trợ cả DB_HOST/DB_PORT/DB_NAME động (từ develop) lẫn hardcode local
     url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:ecommerce_marketplace};encrypt=true;trustServerCertificate=true
     username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:123456}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -15,15 +17,28 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
 
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME}
-  api-key: ${CLOUDINARY_API_KEY}
-  api-secret: ${CLOUDINARY_API_SECRET}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dbmu3dtqu}
+  api-key: ${CLOUDINARY_API_KEY:933636165794721}
+  api-secret: ${CLOUDINARY_API_SECRET:V-yuGfCzd2DQXgVXJ3nldFuvqHI}
 
 server:
   port: 8080
@@ -31,3 +46,14 @@ server:
 logging:
   level:
     com.ecommerce: DEBUG
+
+# =============================================================
+# JWT Configuration
+# Secret phải là chuỗi Base64, >= 256 bits (32 bytes)
+# Sinh secret ngẫu nhiên: openssl rand -base64 64
+# =============================================================
+jwt:
+  secret: ${JWT_SECRET:bXktc2VjcmV0LWtleS1mb3ItZWNvbW1lcmNlLW1hcmtldHBsYWNlLXByb2plY3QtMjAyNg==}
+  expiration:
+    access: 900000        # 15 phút (milliseconds)
+    refresh: 604800000    # 7 ngày  (milliseconds)
