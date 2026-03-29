@@ -11,6 +11,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,6 +22,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final CloudinaryService cloudinaryService;
 
     public UserResponse getProfile(String email) {
         User user = getUserByEmail(email);
@@ -27,16 +32,34 @@ public class UserService {
     @Transactional
     public UserResponse updateProfile(String email, UpdateProfileRequest request) {
         User user = getUserByEmail(email);
-        
-        if (request.getPhone() != null && !request.getPhone().equals(user.getPhone()) 
-            && userRepository.existsByPhone(request.getPhone())) {
+
+        if (request.getPhone() != null && !request.getPhone().isBlank()
+                && !request.getPhone().equals(user.getPhone())
+                && userRepository.existsByPhone(request.getPhone())) {
             throw new AppException(ErrorCode.PHONE_EXISTS);
         }
 
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
-        
+
+        // Chỉ cập nhật avatarUrl nếu có truyền lên
+        if (request.getAvatarUrl() != null && !request.getAvatarUrl().isBlank()) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
+
         return mapToResponse(userRepository.save(user));
+    }
+
+    /**
+     * Upload ảnh đại diện lên Cloudinary, lưu URL vào DB, trả về URL.
+     */
+    @Transactional
+    public String uploadAvatar(String email, MultipartFile file) {
+        User user = getUserByEmail(email);
+        String url = cloudinaryService.uploadImage(file, "avatars");
+        user.setAvatarUrl(url);
+        userRepository.save(user);
+        return url;
     }
 
     @Transactional
@@ -44,7 +67,7 @@ public class UserService {
         User user = getUserByEmail(email);
 
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            throw new AppException(ErrorCode.BAD_CREDENTIALS);
+            throw new AppException(ErrorCode.WRONG_CURRENT_PASSWORD);
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
@@ -57,12 +80,17 @@ public class UserService {
     }
 
     private UserResponse mapToResponse(User user) {
+        List<String> roles = user.getRoles().stream()
+                .map(r -> r.getName())
+                .collect(Collectors.toList());
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .status(user.getStatus())
+                .avatarUrl(user.getAvatarUrl())
+                .roles(roles)
                 .build();
     }
 }

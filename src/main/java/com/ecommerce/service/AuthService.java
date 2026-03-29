@@ -58,7 +58,14 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
-        return buildAuthResponse(user);
+
+        // Trả về thông tin cơ bản — KHÔNG issue token (user phải login riêng)
+        return AuthResponse.builder()
+                .userId(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .roles(List.of("ROLE_CUSTOMER"))
+                .build();
     }
 
     @Transactional

@@ -13,4 +13,6 @@ public class UpdateProfileRequest {
 
     @Pattern(regexp = "^(03|05|07|08|09)\\d{8}$", message = "Số điện thoại phải hợp lệ")
     private String phone;
+
+    private String avatarUrl; // URL ảnh sau khi upload lên Cloudinary
 }
