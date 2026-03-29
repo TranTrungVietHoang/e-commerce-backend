@@ -3,6 +3,8 @@ package com.ecommerce.dto.response.user;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 @Builder
 public class UserResponse {
@@ -11,4 +13,5 @@ public class UserResponse {
     private String fullName;
     private String phone;
     private String status;
+    private List<String> roles;
 }

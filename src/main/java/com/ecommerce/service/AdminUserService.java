@@ -66,12 +66,16 @@ public class AdminUserService {
     }
 
     private UserResponse mapToResponse(User user) {
+        List<String> roles = user.getRoles().stream()
+                .map(r -> r.getName())
+                .collect(Collectors.toList());
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .status(user.getStatus())
+                .roles(roles)
                 .build();
     }
 }
