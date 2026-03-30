@@ -19,24 +19,28 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     public List<Category> getAllCategories() {
-        // Trả về toàn bộ danh mục để FE tự xử lý cây hoặc hiển thị list
         return categoryRepository.findAll();
     }
 
     @Override
     public Category getCategoryById(Integer id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION)); // Bạn có thể thêm CATEGORY_NOT_FOUND vào ErrorCode
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND)); 
     }
 
     @Override
     @Transactional
     public Category createCategory(Object request) {
-        // Giả sử request là Category entity để demo nhanh
+        // Kiểm tra instance trước khi ép kiểu để tránh Runtime Error
+        if (!(request instanceof Category)) {
+            throw new AppException(ErrorCode.UNCATEGORIZED_ERROR);
+        }
+        
         Category category = (Category) request;
         
         if (categoryRepository.existsByName(category.getName())) {
-            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION); // Nên là CATEGORY_ALREADY_EXISTS
+            // Thay đổi từ EXCEPTION sang ERROR để khớp với ErrorCode.java của bạn
+            throw new AppException(ErrorCode.UNCATEGORIZED_ERROR, "Danh mục đã tồn tại");
         }
         
         return categoryRepository.save(category);
@@ -46,6 +50,11 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public Category updateCategory(Integer id, Object request) {
         Category existing = getCategoryById(id);
+        
+        if (!(request instanceof Category)) {
+            throw new AppException(ErrorCode.UNCATEGORIZED_ERROR);
+        }
+        
         Category updateData = (Category) request;
         
         existing.setName(updateData.getName());
@@ -60,7 +69,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public void deleteCategory(Integer id) {
         if (!categoryRepository.existsById(id)) {
-            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION);
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
         }
         categoryRepository.deleteById(id);
     }
