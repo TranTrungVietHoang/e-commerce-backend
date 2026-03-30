@@ -1,14 +1,12 @@
 package com.ecommerce.controller;
 
-import com.ecommerce.dto.common.ApiResponse;
+import com.ecommerce.dto.response.ApiResponse;
 import com.ecommerce.dto.response.revenue.RevenueStatisticsResponse;
 import com.ecommerce.dto.response.revenue.TopProductResponse;
 import com.ecommerce.service.RevenueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,8 +29,7 @@ public class RevenueController {
             @PathVariable Long shopId,
             @RequestParam(defaultValue = "DAY") String period) {
         try {
-            Long sellerId = getCurrentUserId();
-            log.info("Lấy thống kê doanh thu shop: shopId={}, sellerId={}, period={}", shopId, sellerId, period);
+            log.info("Lấy thống kê doanh thu shop: shopId={}, period={}", shopId, period);
             
             RevenueStatisticsResponse response = revenueService.getShopRevenue(shopId, period);
             return ResponseEntity.ok(ApiResponse.success(response));
@@ -99,14 +96,4 @@ public class RevenueController {
     }
 
     // ==================== PRIVATE METHODS ====================
-
-    private Long getCurrentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
-            org.springframework.security.core.userdetails.UserDetails userDetails =
-                    (org.springframework.security.core.userdetails.UserDetails) auth.getPrincipal();
-            return Long.parseLong(userDetails.getUsername());
-        }
-        throw new RuntimeException("Không thể xác định người dùng");
-    }
 }

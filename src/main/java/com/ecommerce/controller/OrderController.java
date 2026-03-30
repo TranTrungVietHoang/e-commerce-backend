@@ -1,11 +1,13 @@
 package com.ecommerce.controller;
 
-import com.ecommerce.dto.common.ApiResponse;
+import com.ecommerce.dto.response.ApiResponse;
 import com.ecommerce.dto.request.order.CreateOrderRequest;
+import com.ecommerce.dto.request.order.UpdateOrderStatusRequest;
 import com.ecommerce.dto.response.order.OrderDetailResponse;
 import com.ecommerce.dto.response.order.OrderListResponse;
 import com.ecommerce.dto.response.order.OrderStatusHistoryResponse;
 import com.ecommerce.service.OrderService;
+import com.ecommerce.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -13,8 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,15 +28,18 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final UserService userService;
 
     /**
      * POST /api/v1/orders
      * Tạo đơn hàng mới từ giỏ hàng
      */
     @PostMapping
-    public ResponseEntity<ApiResponse<OrderDetailResponse>> createOrder(@RequestBody CreateOrderRequest request) {
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> createOrder(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestBody CreateOrderRequest request) {
         try {
-            Long customerId = getCurrentUserId();
+            Long customerId = userService.getUserIdByUsername(userDetails.getUsername());
             log.info("Tạo đơn hàng: customerId={}, shopId={}", customerId, request.getShopId());
             
             OrderDetailResponse response = orderService.createOrder(request, customerId);
@@ -52,9 +57,11 @@ public class OrderController {
      * Lấy chi tiết đơn hàng
      */
     @GetMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<OrderDetailResponse>> getOrderDetail(@PathVariable Long orderId) {
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> getOrderDetail(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long orderId) {
         try {
-            Long customerId = getCurrentUserId();
+            Long customerId = userService.getUserIdByUsername(userDetails.getUsername());
             OrderDetailResponse response = orderService.getOrderDetail(orderId, customerId);
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
@@ -71,10 +78,11 @@ public class OrderController {
      */
     @GetMapping
     public ResponseEntity<ApiResponse<Page<OrderListResponse>>> getMyOrders(
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Long customerId = getCurrentUserId();
+            Long customerId = userService.getUserIdByUsername(userDetails.getUsername());
             Pageable pageable = PageRequest.of(page, size);
             Page<OrderListResponse> orderPage = orderService.getCustomerOrders(customerId, pageable);
             return ResponseEntity.ok(ApiResponse.success(orderPage));
@@ -91,11 +99,12 @@ public class OrderController {
      */
     @GetMapping("/shop/{shopId}")
     public ResponseEntity<ApiResponse<Page<OrderListResponse>>> getShopOrders(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long shopId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            Long userId = getCurrentUserId();
+            Long userId = userService.getUserIdByUsername(userDetails.getUsername());
             log.info("Lấy danh sách đơn của shop: shopId={}, userId={}", shopId, userId);
             
             Pageable pageable = PageRequest.of(page, size);
@@ -115,10 +124,11 @@ public class OrderController {
      */
     @PutMapping("/{orderId}/status")
     public ResponseEntity<ApiResponse<OrderDetailResponse>> updateOrderStatus(
+            @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long orderId,
             @RequestBody UpdateOrderStatusRequest request) {
         try {
-            Long sellerId = getCurrentUserId();
+            Long sellerId = userService.getUserIdByUsername(userDetails.getUsername());
             log.info("Cập nhật trạng thái đơn: orderId={}, sellerId={}, status={}", orderId, sellerId, request.getStatus());
             
             OrderDetailResponse response = orderService.updateOrderStatus(orderId, request.getStatus(), sellerId);
@@ -135,9 +145,11 @@ public class OrderController {
      * Hủy đơn hàng (khách hàng only, chỉ hủy được đơn ở trạng thái PENDING)
      */
     @DeleteMapping("/{orderId}")
-    public ResponseEntity<ApiResponse<OrderDetailResponse>> cancelOrder(@PathVariable Long orderId) {
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> cancelOrder(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long orderId) {
         try {
-            Long customerId = getCurrentUserId();
+            Long customerId = userService.getUserIdByUsername(userDetails.getUsername());
             log.info("Hủy đơn hàng: orderId={}, customerId={}", orderId, customerId);
             
             OrderDetailResponse response = orderService.cancelOrder(orderId, customerId);
@@ -154,10 +166,10 @@ public class OrderController {
      * Xem lịch sử thay đổi trạng thái của đơn
      */
     @GetMapping("/{orderId}/status-history")
-    public ResponseEntity<ApiResponse<List<OrderStatusHistoryResponse>>> getOrderStatusHistory(
+    public ResponseEntity<ApiResponse<java.util.List<OrderStatusHistoryResponse>>> getOrderStatusHistory(
             @PathVariable Long orderId) {
         try {
-            List<OrderStatusHistoryResponse> history = orderService.getOrderStatusHistory(orderId);
+            java.util.List<OrderStatusHistoryResponse> history = orderService.getOrderStatusHistory(orderId);
             return ResponseEntity.ok(ApiResponse.success(history));
         } catch (Exception e) {
             log.error("Lỗi lấy lịch sử trạng thái: {}", e.getMessage());
