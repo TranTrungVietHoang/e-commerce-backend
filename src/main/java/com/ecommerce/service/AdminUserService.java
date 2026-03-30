@@ -37,7 +37,7 @@ public class AdminUserService {
                 .pageSize(usersPage.getSize())
                 .totalPages(usersPage.getTotalPages())
                 .totalElements(usersPage.getTotalElements())
-                .items(userResponses)
+                .content(userResponses)
                 .build();
     }
 
