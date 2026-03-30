@@ -3,21 +3,46 @@ spring:
     name: e-commerce-backend
   datasource:
     # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật (Dành cho Team)
-    url: jdbc:sqlserver://localhost:1433;databaseName=ecommerce_marketplace;encrypt=true;trustServerCertificate=true
-    username: ${DB_USERNAME:sa} # Mặc định là sa nếu không cài đặt biến môi trường
-    password: ${DB_PASSWORD:}   # Mặc định để trống nếu không cài đặt biến môi trường
+    # Hỗ trợ cả DB_HOST/DB_PORT/DB_NAME động (từ develop) lẫn hardcode local
+    url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:ecommerce_marketplace};encrypt=true;trustServerCertificate=true
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:123456}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: true
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
 
 server:
   port: 8080
+
+# Application Configuration
+app:
+  sepay:
+    api-key: ${APP_SEPAY_API_KEY:demo_key}  # Mặc định là demo key, nên sử dụng biến môi trường
+  jwt:
+    secret: ${JWT_SECRET:your-secret-key-for-jwt-signing-change-in-production}
+    expiration: ${JWT_EXPIRATION:86400000}  # 24 hours in milliseconds
+  cloudinary:
+    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
+    api-key: ${CLOUDINARY_API_KEY:}
+    api-secret: ${CLOUDINARY_API_SECRET:}
 
 logging:
   level:
