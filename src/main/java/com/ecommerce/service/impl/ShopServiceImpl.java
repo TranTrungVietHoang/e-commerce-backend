@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ShopServiceImpl implements ShopService {
@@ -25,33 +27,38 @@ public class ShopServiceImpl implements ShopService {
     @Override
     public Shop getShopInfo(Long shopId) {
         return shopRepository.findById(shopId)
-                .orElseThrow(() -> new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION));
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+    }
+
+    @Override
+    public Shop getShopById(Long id) {
+        return getShopInfo(id);
+    }
+
+    @Override
+    public List<Shop> getAllShops() {
+        return shopRepository.findAll();
     }
 
     @Override
     @Transactional
-    public Shop createShop(Long sellerId, Object request) {
-        // 1. Kiểm tra User có tồn tại không
+    public Shop createShop(Long sellerId, Shop shop) {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // 2. Kiểm tra User đã có shop chưa (OneToOne)
         if (shopRepository.existsBySellerId(sellerId)) {
-            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION); // Nên là SHOP_ALREADY_EXISTS
+            throw new AppException(ErrorCode.USER_ALREADY_EXISTS, "Người dùng đã có cửa hàng");
         }
 
-        Shop shop = (Shop) request;
         shop.setSeller(seller);
-        shop.setStatus(ShopStatus.PENDING); // Luôn để PENDING khi mới đăng ký
-
+        shop.setStatus(ShopStatus.PENDING);
         return shopRepository.save(shop);
     }
 
     @Override
     @Transactional
-    public Shop updateShopInfo(Long shopId, Object request) {
+    public Shop updateShopInfo(Long shopId, Shop updateData) {
         Shop existing = getShopInfo(shopId);
-        Shop updateData = (Shop) request;
 
         existing.setName(updateData.getName());
         existing.setDescription(updateData.getDescription());
@@ -64,12 +71,18 @@ public class ShopServiceImpl implements ShopService {
     @Override
     public PageResponse<Shop> getShops(Pageable pageable) {
         Page<Shop> shopPage = shopRepository.findAll(pageable);
-
-        // Sử dụng hàm static xịn bạn đã viết trong PageResponse
-        return PageResponse.fromPage(shopPage);
+        
+        // Nếu dòng dưới vẫn báo lỗi "undefined", hãy xem bước 3 bên dưới
+        return PageResponse.<Shop>builder()
+                .content(shopPage.getContent())
+                .pageSize(shopPage.getSize())
+                .pageNumber(shopPage.getNumber())
+                .totalElements(shopPage.getTotalElements())
+                .totalPages(shopPage.getTotalPages())
+                .build();
     }
 
-    // Thêm hàm cho Admin duyệt shop (Bạn có thể thêm vào interface sau)
+    @Override
     @Transactional
     public void approveShop(Long shopId, ShopStatus status) {
         Shop shop = getShopInfo(shopId);
