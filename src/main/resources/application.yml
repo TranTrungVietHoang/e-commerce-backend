@@ -1,13 +1,14 @@
 spring:
   application:
     name: e-commerce-backend
+  
+  # Cấu hình SQL Server - Linh hoạt cho cả Team và Local
   datasource:
-    # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật (Dành cho Team)
-    # Hỗ trợ cả DB_HOST/DB_PORT/DB_NAME động (từ develop) lẫn hardcode local
     url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:ecommerce_marketplace};encrypt=true;trustServerCertificate=true
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:123456}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
   jpa:
     hibernate:
       ddl-auto: validate
@@ -16,11 +17,13 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: true
+
+  # Cấu hình Mail - Hợp nhất từ 2 bản
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -29,20 +32,31 @@ spring:
             enable: true
             required: true
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# Cấu hình Cloudinary (Sử dụng cấu hình từ khối app để đồng bộ)
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dbmu3dtqu}
+  api-key: ${CLOUDINARY_API_KEY:933636165794721}
+  api-secret: ${CLOUDINARY_API_SECRET:V-yuGfCzd2DQXgVXJ3nldFuvqHI}
+
 server:
   port: 8080
 
-# Application Configuration
+# Application Business Logic Configuration
 app:
   sepay:
-    api-key: ${APP_SEPAY_API_KEY:demo_key}  # Mặc định là demo key, nên sử dụng biến môi trường
+    api-key: ${APP_SEPAY_API_KEY:demo_key}
+  
+  # JWT Configuration - Thống nhất thời gian hết hạn
   jwt:
-    secret: ${JWT_SECRET:your-secret-key-for-jwt-signing-change-in-production}
-    expiration: ${JWT_EXPIRATION:86400000}  # 24 hours in milliseconds
-  cloudinary:
-    cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-    api-key: ${CLOUDINARY_API_KEY:}
-    api-secret: ${CLOUDINARY_API_SECRET:}
+    secret: ${JWT_SECRET:bXktc2VjcmV0LWtleS1mb3ItZWNvbW1lcmNlLW1hcmtldHBsYWNlLXByb2plY3QtMjAyNg==}
+    expiration:
+      access: 900000         # 15 phút
+      refresh: 604800000     # 7 ngày
 
 logging:
   level:

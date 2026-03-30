@@ -1,39 +1,66 @@
 package com.ecommerce.exception;
 
+import lombok.Getter;
+import org.springframework.http.HttpStatus;
+
 /**
- * Mã lỗi được sử dụng trong ứng dụng
+ * Tập trung toàn bộ mã lỗi nghiệp vụ của hệ thống.
  */
+@Getter
 public enum ErrorCode {
-    UNCATEGORIZED_EXCEPTION("9999", "Uncategorized error"),
-    INVALID_KEY("1000", "Invalid message key"),
-    INVALID_USERNAME("1001", "Username should be at least 3 characters"),
-    INVALID_PASSWORD("1002", "Password should be at least 8 characters"),
-    INVALID_EMAIL("1003", "Invalid email format"),
-    USER_NOT_FOUND("1004", "User not found"),
-    USER_ALREADY_EXISTS("1005", "User already exists"),
-    INVALID_TOKEN("1006", "Invalid or expired token"),
-    UNAUTHORIZED("1007", "Unauthorized"),
-    FORBIDDEN("1008", "Forbidden"),
-    PASSWORD_NOT_MATCH("1009", "Password does not match"),
-    OTP_INVALID("1010", "OTP is invalid"),
-    OTP_EXPIRED("1011", "OTP is expired"),
-    OTP_INVALID_OR_EXPIRED("1012", "OTP is invalid or expired"),
-    VERIFICATION_TOKEN_NOT_FOUND("1013", "Verification token not found"),
-    ;
 
-    private final String code;
+    // =========================================================
+    // COMMON (1xxx)
+    // =========================================================
+    UNCATEGORIZED_ERROR(1000, "Lỗi hệ thống không xác định", HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_REQUEST(1001, "Dữ liệu đầu vào không hợp lệ", HttpStatus.BAD_REQUEST),
+    RESOURCE_NOT_FOUND(1002, "Tài nguyên không tồn tại", HttpStatus.NOT_FOUND),
+    ACCESS_DENIED(1003, "Không có quyền truy cập", HttpStatus.FORBIDDEN),
+    INVALID_KEY(1004, "Message key không hợp lệ", HttpStatus.BAD_REQUEST),
+
+    // =========================================================
+    // AUTH (2xxx)
+    // =========================================================
+    EMAIL_EXISTS(2001, "Email này đã được đăng ký", HttpStatus.CONFLICT),
+    PHONE_EXISTS(2002, "Số điện thoại này đã được sử dụng", HttpStatus.CONFLICT),
+    BAD_CREDENTIALS(2003, "Sai email hoặc mật khẩu", HttpStatus.UNAUTHORIZED),
+    USER_LOCKED(2004, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin", HttpStatus.FORBIDDEN),
+    INVALID_TOKEN(2005, "Token không hợp lệ hoặc đã hết hạn", HttpStatus.UNAUTHORIZED),
+    TOKEN_EXPIRED(2006, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại", HttpStatus.UNAUTHORIZED),
+    USER_ALREADY_EXISTS(2007, "Người dùng đã tồn tại", HttpStatus.CONFLICT),
+    UNAUTHORIZED(2008, "Chưa xác thực tài khoản", HttpStatus.UNAUTHORIZED),
+    FORBIDDEN(2009, "Bạn không có quyền thực hiện hành động này", HttpStatus.FORBIDDEN),
+
+    // =========================================================
+    // USER (3xxx)
+    // =========================================================
+    USER_NOT_FOUND(3001, "Người dùng không tồn tại", HttpStatus.NOT_FOUND),
+    WRONG_CURRENT_PASSWORD(3002, "Mật khẩu hiện tại không đúng", HttpStatus.BAD_REQUEST),
+    PASSWORD_NOT_MATCH(3003, "Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST),
+    INVALID_USERNAME(3004, "Tên người dùng phải có ít nhất 3 ký tự", HttpStatus.BAD_REQUEST),
+    INVALID_PASSWORD(3005, "Mật khẩu phải có ít nhất 8 ký tự", HttpStatus.BAD_REQUEST),
+    INVALID_EMAIL(3006, "Định dạng email không hợp lệ", HttpStatus.BAD_REQUEST),
+
+    // =========================================================
+    // OTP (5xxx)
+    // =========================================================
+    OTP_INVALID(5001, "Mã OTP không hợp lệ", HttpStatus.BAD_REQUEST),
+    OTP_EXPIRED(5002, "Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới", HttpStatus.BAD_REQUEST),
+    OTP_INVALID_OR_EXPIRED(5003, "Mã OTP không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
+    VERIFICATION_TOKEN_NOT_FOUND(5004, "Token xác thực không tồn tại", HttpStatus.NOT_FOUND),
+
+    // =========================================================
+    // ADMIN (4xxx)
+    // =========================================================
+    CANNOT_LOCK_ADMIN(4001, "Không thể khóa tài khoản Admin khác", HttpStatus.FORBIDDEN);
+
+    private final int code;
     private final String message;
+    private final HttpStatus httpStatus;
 
-    ErrorCode(String code, String message) {
+    ErrorCode(int code, String message, HttpStatus httpStatus) {
         this.code = code;
         this.message = message;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getMessage() {
-        return message;
+        this.httpStatus = httpStatus;
     }
 }

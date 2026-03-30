@@ -1,16 +1,11 @@
-<<<<<<< Updated upstream
-=======
 package com.ecommerce.entity;
 
+import com.ecommerce.enums.ShopStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
-import com.ecommerce.enums.ShopStatus; // Đã import Enum
 import java.time.LocalDateTime;
 
 /**
@@ -22,6 +17,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@EqualsAndHashCode(exclude = {"seller"})
+@ToString(exclude = {"seller"})
 public class Shop {
 
     @Id
@@ -29,7 +26,7 @@ public class Shop {
     @Schema(description = "Shop ID")
     private Long id;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id", nullable = false, unique = true)
     @Schema(description = "Chủ shop (User)")
     private User seller;
@@ -50,13 +47,13 @@ public class Shop {
     @Schema(description = "URL banner shop")
     private String bannerUrl;
 
-    // --- STATUS FIELD ---
-    @Enumerated(EnumType.STRING) // Giúp lưu "PENDING" vào DB thay vì số 0
+    @Enumerated(EnumType.STRING)
     @Column(length = 20, nullable = false)
-    private ShopStatus status = ShopStatus.PENDING; 
-    // -------------------------
+    @Builder.Default
+    @Schema(description = "Trạng thái shop (PENDING, ACTIVE, v.v.)")
+    private ShopStatus status = ShopStatus.PENDING;
 
-    @Column(name = "rating")
+    @Column(name = "rating", precision = 3, scale = 2)
     @Builder.Default
     @Schema(description = "Đánh giá trung bình")
     private BigDecimal rating = BigDecimal.ZERO;
@@ -79,4 +76,3 @@ public class Shop {
         updatedAt = LocalDateTime.now();
     }
 }
->>>>>>> Stashed changes

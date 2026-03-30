@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 package com.ecommerce.repository;
 
 import com.ecommerce.entity.Shop;
@@ -16,11 +14,11 @@ import java.util.Optional;
  */
 @Repository
 public interface ShopRepository extends JpaRepository<Shop, Long> {
+    
     // 1. Lấy danh sách shop theo trạng thái (Dùng cho Admin lọc shop PENDING để duyệt)
     List<Shop> findByStatus(ShopStatus status);
 
     // 2. Tìm shop theo đối tượng User (Seller) 
-    // Spring Data JPA sẽ tự hiểu và thực hiện JOIN với bảng User qua seller_id
     Optional<Shop> findBySeller(User seller);
 
     // 3. Tìm shop nhanh bằng ID của người bán (Seller ID)
@@ -32,4 +30,3 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     // 5. Kiểm tra xem một User đã có Shop chưa (Vì quan hệ là OneToOne)
     boolean existsBySellerId(Long sellerId);
 }
->>>>>>> Stashed changes

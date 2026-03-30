@@ -2,16 +2,11 @@ package com.ecommerce.entity;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Entity đại diện cho VerificationToken (Token xác thực email, OTP, etc.)
- */
 @Entity
 @Table(name = "verification_tokens")
 @Data
@@ -25,8 +20,10 @@ public class VerificationToken {
     @Schema(description = "VerificationToken ID")
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY) // Dùng Lazy để tối ưu hiệu năng
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     @Schema(description = "User sở hữu token")
     private User user;
 
@@ -43,21 +40,23 @@ public class VerificationToken {
     private LocalDateTime expiresAt;
 
     @Column(name = "is_used", nullable = false)
-    @Builder.Default // Quan trọng: Để Builder không gán giá trị này thành null
+    @Builder.Default 
     private Boolean isUsed = false;
 
+    @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     @Schema(description = "Ngày tạo")
     private LocalDateTime createdAt;
 
-    // Hàm tiện ích kiểm tra hết hạn
+    /**
+     * Hàm tiện ích kiểm tra xem token đã hết hạn chưa
+     */
     public boolean isExpired() {
         return LocalDateTime.now().isAfter(this.expiresAt);
     }
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
         if (this.isUsed == null) {
             this.isUsed = false;
         }

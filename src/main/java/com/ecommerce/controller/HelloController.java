@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
+@RequestMapping("/api/v1/test")
 public class HelloController {
 
     @GetMapping("/")
@@ -22,7 +23,7 @@ public class HelloController {
         return response;
     }
 
-    @GetMapping("/api/test/hello")
+    @GetMapping("/hello")
     public Map<String, String> hello() {
         return Map.of("message", "Backend Spring Boot đã sẵn sàng! 🚀");
     }

@@ -1,48 +1,86 @@
 package com.ecommerce.controller;
 
+import com.ecommerce.dto.request.auth.LoginRequest;
+import com.ecommerce.dto.request.auth.RefreshTokenRequest;
+import com.ecommerce.dto.request.auth.RegisterRequest;
+import com.ecommerce.dto.request.auth.ForgotPasswordRequest;
+import com.ecommerce.dto.request.auth.VerifyOtpRequest;
+import com.ecommerce.dto.request.auth.ResetPasswordRequest;
+import com.ecommerce.dto.response.ApiResponse;
+import com.ecommerce.dto.response.auth.AuthResponse;
 import com.ecommerce.service.AuthService;
 import com.ecommerce.service.OtpService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Authentication", description = "Các API liên quan đến xác thực và OTP")
 public class AuthController {
 
     private final AuthService authService;
     private final OtpService otpService;
 
     @PostMapping("/register")
-    @Operation(summary = "Đăng ký tài khoản mới")
-    public ResponseEntity<Object> register(@RequestBody Object request) {
-        return ResponseEntity.ok(authService.register(request));
-    }
-
-    @PostMapping("/forgot-password")
-    @Operation(summary = "Yêu cầu gửi OTP quên mật khẩu")
-    public ResponseEntity<String> forgotPassword(@RequestParam String email) {
-        otpService.generateAndSendOtp(email);
-        return ResponseEntity.ok("Mã OTP đã được gửi đến email của bạn.");
-    }
-
-    @PostMapping("/reset-password")
-    @Operation(summary = "Xác nhận OTP và đặt lại mật khẩu")
-    public ResponseEntity<String> resetPassword(
-            @RequestParam String email,
-            @RequestParam String otp,
-            @RequestParam String newPassword) {
-        otpService.verifyAndResetPassword(email, otp, newPassword);
-        return ResponseEntity.ok("Mật khẩu đã được thay đổi thành công.");
+    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(authService.register(request), "Đăng ký thành công"));
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Đăng nhập hệ thống")
-    public ResponseEntity<Object> login(@RequestParam String email, @RequestParam String password) {
-        return ResponseEntity.ok(authService.login(email, password));
+    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(authService.login(request), "Đăng nhập thành công"));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(authService.refreshToken(request), "Làm mới token thành công"));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@AuthenticationPrincipal UserDetails userDetails) {
+        authService.logout(userDetails.getUsername());
+        return ResponseEntity.ok(ApiResponse.success(null, "Đăng xuất thành công"));
+    }
+
+    // ==========================================
+    // Mật khẩu & OTP
+    // ==========================================
+    
+    @PostMapping("/forgot-password")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        otpService.generateAndSendOtp(request.getEmail());
+        return ResponseEntity.ok(ApiResponse.success(null, "Nếu email hợp lệ, mã OTP sẽ được gửi đến hòm thư của bạn"));
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse<Void>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(null, "Mã OTP hợp lệ"));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            return ResponseEntity.badRequest().body(ApiResponse.<Void>builder().code(400).message("Xác nhận mật khẩu không khớp").build());
+        }
+        otpService.verifyAndResetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success(null, "Đặt lại mật khẩu thành công. Vui lòng đăng nhập lại."));
+    }
+
+    // ==========================================
+    // OAuth2 Login (Google / Github) - Chừa sẵn
+    // ==========================================
+    
+    @GetMapping("/oauth2/google")
+    public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(@RequestParam("code") String code) {
+        return ResponseEntity.status(501).body(ApiResponse.<AuthResponse>builder().code(501).message("Tính năng đăng nhập Google đang được phát triển").build());
+    }
+
+    @GetMapping("/oauth2/github")
+    public ResponseEntity<ApiResponse<AuthResponse>> githubLogin(@RequestParam("code") String code) {
+        return ResponseEntity.status(501).body(ApiResponse.<AuthResponse>builder().code(501).message("Tính năng đăng nhập Github đang được phát triển").build());
     }
 }
