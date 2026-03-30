@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,11 +36,11 @@ public class HomeServiceImpl implements HomeService {
         ));
 
         // 8 sản phẩm mới nhất
-        List<Product> newest = productRepository.findTop8ByOrderByCreatedAtDesc(PageRequest.of(0, 8));
+        List<Product> newest = productRepository.findByStatusOrderByCreatedAtDesc("ACTIVE", PageRequest.of(0, 8));
         response.setNewestProducts(newest.stream().map(this::mapToResponse).collect(Collectors.toList()));
 
         // 8 sản phẩm bán chạy nhất
-        List<Product> bestsellers = productRepository.findTop8ByOrderBySoldCountDesc(PageRequest.of(0, 8));
+        List<Product> bestsellers = productRepository.findByStatusOrderBySoldCountDesc("ACTIVE", PageRequest.of(0, 8));
         response.setBestSellingProducts(bestsellers.stream().map(this::mapToResponse).collect(Collectors.toList()));
 
         return response;
@@ -55,13 +57,34 @@ public class HomeServiceImpl implements HomeService {
         res.setCreatedAt(product.getCreatedAt());
         res.setStockQuantity(product.getStockQuantity());
         res.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);
+        res.setPrimaryImageUrl(resolvePrimaryImage(product));
+        res.setEffectivePrice(resolveEffectivePrice(product));
+        res.setFlashSaleActive(isFlashSaleActive(product));
+        res.setFlashSalePrice(product.getFlashSalePrice());
+        res.setFlashSaleStartAt(product.getFlashSaleStartAt());
+        res.setFlashSaleEndAt(product.getFlashSaleEndAt());
+        return res;
+    }
 
-        String primaryImg = product.getImages().stream()
+    private boolean isFlashSaleActive(Product product) {
+        LocalDateTime now = LocalDateTime.now();
+        return Boolean.TRUE.equals(product.getFlashSaleEnabled())
+                && product.getFlashSalePrice() != null
+                && product.getFlashSaleStartAt() != null
+                && product.getFlashSaleEndAt() != null
+                && !now.isBefore(product.getFlashSaleStartAt())
+                && now.isBefore(product.getFlashSaleEndAt());
+    }
+
+    private BigDecimal resolveEffectivePrice(Product product) {
+        return isFlashSaleActive(product) ? product.getFlashSalePrice() : product.getBasePrice();
+    }
+
+    private String resolvePrimaryImage(Product product) {
+        return product.getImages().stream()
                 .filter(img -> Boolean.TRUE.equals(img.getIsPrimary()))
                 .map(ProductImage::getImageUrl)
                 .findFirst()
                 .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
-        res.setPrimaryImageUrl(primaryImg);
-        return res;
     }
 }

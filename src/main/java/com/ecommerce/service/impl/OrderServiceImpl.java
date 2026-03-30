@@ -121,6 +121,8 @@ public class OrderServiceImpl implements OrderService {
         order.setPointsUsed(request.getPointsUsed() != null ? request.getPointsUsed() : 0);
         order.setStatus("PENDING");
         order.setShippingAddress(request.getShippingAddress());
+        order.setRecipientName(request.getRecipientName());
+        order.setRecipientPhone(request.getRecipientPhone());
         order.setPaymentMethod(request.getPaymentMethod());
 
         Order savedOrder = orderRepository.save(order);
@@ -139,6 +141,7 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setUnitPrice(cartItem.getUnitPrice());
 
             orderItemRepository.save(orderItem);
+            savedOrder.getItems().add(orderItem);
 
             // Trừ kho
             if (variant != null) {
@@ -156,6 +159,7 @@ public class OrderServiceImpl implements OrderService {
         statusHistory.setStatus("PENDING");
         statusHistory.setNote("Đơn hàng vừa được tạo");
         orderStatusHistoryRepository.save(statusHistory);
+        savedOrder.getStatusHistories().add(statusHistory);
 
         // Xóa items trong giỏ hàng
         cartItemRepository.deleteAll(cartItems);
@@ -293,6 +297,8 @@ public class OrderServiceImpl implements OrderService {
                 .pointsUsed(order.getPointsUsed())
                 .status(order.getStatus())
                 .shippingAddress(order.getShippingAddress())
+                .recipientName(order.getRecipientName())
+                .recipientPhone(order.getRecipientPhone())
                 .paymentMethod(order.getPaymentMethod())
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())

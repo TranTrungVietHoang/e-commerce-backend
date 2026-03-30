@@ -21,6 +21,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
@@ -43,12 +45,12 @@ public class OrderController {
             log.info("Tạo đơn hàng: customerId={}, shopId={}", customerId, request.getShopId());
             
             OrderDetailResponse response = orderService.createOrder(request, customerId);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(response, "Tạo đơn hàng thành công"));
+            return new ResponseEntity<>(ApiResponse.success(response, "Tạo đơn hàng thành công"), HttpStatus.CREATED);
         } catch (Exception e) {
             log.error("Lỗi tạo đơn hàng: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<OrderDetailResponse> errorResponse = (ApiResponse<OrderDetailResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -63,11 +65,12 @@ public class OrderController {
         try {
             Long customerId = userService.getUserIdByUsername(userDetails.getUsername());
             OrderDetailResponse response = orderService.getOrderDetail(orderId, customerId);
-            return ResponseEntity.ok(ApiResponse.success(response));
+            return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi lấy chi tiết đơn: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<OrderDetailResponse> errorResponse = (ApiResponse<OrderDetailResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -83,13 +86,14 @@ public class OrderController {
             @RequestParam(defaultValue = "10") int size) {
         try {
             Long customerId = userService.getUserIdByUsername(userDetails.getUsername());
-            Pageable pageable = PageRequest.of(page, size);
+            org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
             Page<OrderListResponse> orderPage = orderService.getCustomerOrders(customerId, pageable);
-            return ResponseEntity.ok(ApiResponse.success(orderPage));
+            return new ResponseEntity<>(ApiResponse.success(orderPage), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi lấy danh sách đơn: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<Page<OrderListResponse>> errorResponse = (ApiResponse<Page<OrderListResponse>>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -107,13 +111,14 @@ public class OrderController {
             Long userId = userService.getUserIdByUsername(userDetails.getUsername());
             log.info("Lấy danh sách đơn của shop: shopId={}, userId={}", shopId, userId);
             
-            Pageable pageable = PageRequest.of(page, size);
+            Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
             Page<OrderListResponse> orderPage = orderService.getShopOrders(shopId, pageable);
-            return ResponseEntity.ok(ApiResponse.success(orderPage));
+            return new ResponseEntity<>(ApiResponse.success(orderPage), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi lấy danh sách đơn shop: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<Page<OrderListResponse>> errorResponse = (ApiResponse<Page<OrderListResponse>>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -132,11 +137,12 @@ public class OrderController {
             log.info("Cập nhật trạng thái đơn: orderId={}, sellerId={}, status={}", orderId, sellerId, request.getStatus());
             
             OrderDetailResponse response = orderService.updateOrderStatus(orderId, request.getStatus(), sellerId);
-            return ResponseEntity.ok(ApiResponse.success(response, "Cập nhật trạng thái thành công"));
+            return new ResponseEntity<>(ApiResponse.success(response, "Cập nhật trạng thái thành công"), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi cập nhật trạng thái: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<OrderDetailResponse> errorResponse = (ApiResponse<OrderDetailResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -153,11 +159,12 @@ public class OrderController {
             log.info("Hủy đơn hàng: orderId={}, customerId={}", orderId, customerId);
             
             OrderDetailResponse response = orderService.cancelOrder(orderId, customerId);
-            return ResponseEntity.ok(ApiResponse.success(response, "Hủy đơn hàng thành công"));
+            return new ResponseEntity<>(ApiResponse.success(response, "Hủy đơn hàng thành công"), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi hủy đơn hàng: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<OrderDetailResponse> errorResponse = (ApiResponse<OrderDetailResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -166,37 +173,16 @@ public class OrderController {
      * Xem lịch sử thay đổi trạng thái của đơn
      */
     @GetMapping("/{orderId}/status-history")
-    public ResponseEntity<ApiResponse<java.util.List<OrderStatusHistoryResponse>>> getOrderStatusHistory(
+    public ResponseEntity<ApiResponse<List<OrderStatusHistoryResponse>>> getOrderStatusHistory(
             @PathVariable Long orderId) {
         try {
-            java.util.List<OrderStatusHistoryResponse> history = orderService.getOrderStatusHistory(orderId);
-            return ResponseEntity.ok(ApiResponse.success(history));
+            List<OrderStatusHistoryResponse> history = orderService.getOrderStatusHistory(orderId);
+            return new ResponseEntity<>(ApiResponse.success(history), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi lấy lịch sử trạng thái: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<List<OrderStatusHistoryResponse>> errorResponse = (ApiResponse<List<OrderStatusHistoryResponse>>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
-    }
-
-    // ==================== PRIVATE METHODS ====================
-
-    private Long getCurrentUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
-            org.springframework.security.core.userdetails.UserDetails userDetails = 
-                    (org.springframework.security.core.userdetails.UserDetails) auth.getPrincipal();
-            // Assume username is email or ID
-            String username = userDetails.getUsername();
-            // TODO: Implement proper user ID retrieval from JWT token
-            return Long.parseLong(username);
-        }
-        throw new RuntimeException("Không thể xác định người dùng");
-    }
-
-    // ==================== DTO CLASSES ====================
-
-    @lombok.Data
-    public static class UpdateOrderStatusRequest {
-        private String status; // CONFIRMED, SHIPPING, DELIVERED, CANCELLED
     }
 }

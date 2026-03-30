@@ -6,6 +6,7 @@ import com.ecommerce.dto.response.revenue.TopProductResponse;
 import com.ecommerce.service.RevenueService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,13 +31,14 @@ public class RevenueController {
             @RequestParam(defaultValue = "DAY") String period) {
         try {
             log.info("Lấy thống kê doanh thu shop: shopId={}, period={}", shopId, period);
-            
             RevenueStatisticsResponse response = revenueService.getShopRevenue(shopId, period);
-            return ResponseEntity.ok(ApiResponse.success(response));
+            return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi lấy thống kê doanh thu: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<RevenueStatisticsResponse> errorResponse = 
+                (ApiResponse<RevenueStatisticsResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -50,11 +52,13 @@ public class RevenueController {
         try {
             log.info("Lấy thống kê doanh thu nền tảng: period={}", period);
             RevenueStatisticsResponse response = revenueService.getPlatformRevenue(period);
-            return ResponseEntity.ok(ApiResponse.success(response));
+            return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi lấy thống kê nền tảng: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<RevenueStatisticsResponse> errorResponse = 
+                (ApiResponse<RevenueStatisticsResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -69,11 +73,13 @@ public class RevenueController {
         try {
             log.info("Lấy top {} sản phẩm của shop: shopId={}", limit, shopId);
             List<TopProductResponse> response = revenueService.getTopProducts(shopId, limit);
-            return ResponseEntity.ok(ApiResponse.success(response));
+            return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi lấy top products: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<List<TopProductResponse>> errorResponse = 
+                (ApiResponse<List<TopProductResponse>>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -87,11 +93,13 @@ public class RevenueController {
         try {
             log.info("Lấy thống kê doanh thu hôm nay: shopId={}", shopId);
             RevenueStatisticsResponse response = revenueService.getTodayRevenue(shopId);
-            return ResponseEntity.ok(ApiResponse.success(response));
+            return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi lấy doanh thu hôm nay: {}", e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error(400, e.getMessage()));
+            @SuppressWarnings("unchecked")
+            ApiResponse<RevenueStatisticsResponse> errorResponse = 
+                (ApiResponse<RevenueStatisticsResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
 

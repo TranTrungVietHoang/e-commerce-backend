@@ -22,6 +22,8 @@ public class OrderDetailResponse implements Serializable {
     private Integer pointsUsed;
     private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
     private String shippingAddress;
+    private String recipientName;
+    private String recipientPhone;
     private String paymentMethod; // COD, SEPAY_TRANSFER
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

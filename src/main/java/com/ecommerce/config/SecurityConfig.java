@@ -83,6 +83,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/search/**").permitAll()
                         // Swagger UI (dev env)
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
+                        // Webhook Sepay (máy chủ của họ sẽ bắn vào đây)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/payments/sepay/webhook").permitAll()
                         // Test endpoint
                         .requestMatchers("/api/v1/test/**").permitAll()
 

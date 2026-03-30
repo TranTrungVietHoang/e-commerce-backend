@@ -7,6 +7,7 @@ import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -49,6 +50,12 @@ public class Order {
     @Column(name = "shipping_address", columnDefinition = "NVARCHAR(MAX)", nullable = false)
     private String shippingAddress;
 
+    @Column(name = "recipient_name", length = 100, nullable = false, columnDefinition = "NVARCHAR(100) DEFAULT 'Chưa xác định'")
+    private String recipientName = "Chưa xác định";
+
+    @Column(name = "recipient_phone", length = 20, nullable = false, columnDefinition = "VARCHAR(20) DEFAULT '0000000000'")
+    private String recipientPhone = "0000000000";
+
     @Column(name = "payment_method", nullable = false, length = 50)
     private String paymentMethod; // COD, SEPAY_TRANSFER
 
@@ -59,10 +66,10 @@ public class Order {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderItem> items;
+    private List<OrderItem> items = new ArrayList<>();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderStatusHistory> statusHistories;
+    private List<OrderStatusHistory> statusHistories = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
