@@ -1,12 +1,14 @@
 package com.ecommerce.service;
 
-import com.ecommerce.entity.Category;
+import com.ecommerce.dto.request.CategoryRequest;
+import com.ecommerce.dto.response.CategoryResponse;
+
 import java.util.List;
 
 public interface CategoryService {
-    List<Category> getAllCategories();
-    Category getCategoryById(Integer id);
-    Category createCategory(Object request); // Dùng Object để khớp với Impl của bạn
-    Category updateCategory(Integer id, Object request);
-    void deleteCategory(Integer id);
+    List<CategoryResponse> getAllCategories();
+    CategoryResponse getCategoryById(Long id);
+    CategoryResponse createCategory(CategoryRequest request);
+    CategoryResponse updateCategory(Long id, CategoryRequest request);
+    void deleteCategory(Long id);
 }

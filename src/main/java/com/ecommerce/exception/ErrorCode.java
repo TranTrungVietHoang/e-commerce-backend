@@ -52,7 +52,15 @@ public enum ErrorCode {
     // =========================================================
     // ADMIN (4xxx)
     // =========================================================
-    CANNOT_LOCK_ADMIN(4001, "Không thể khóa tài khoản Admin khác", HttpStatus.FORBIDDEN);
+    CANNOT_LOCK_ADMIN(4001, "Không thể khóa tài khoản Admin khác", HttpStatus.FORBIDDEN),
+
+    // =========================================================
+    // CATEGORY (6xxx)
+    // =========================================================
+    CATEGORY_NOT_FOUND(6001, "Danh mục không tồn tại", HttpStatus.NOT_FOUND),
+    CATEGORY_ALREADY_EXISTS(6002, "Tên danh mục đã tồn tại", HttpStatus.CONFLICT),
+    CATEGORY_SLUG_EXISTS(6003, "Đường dẫn (Slug) đã tồn tại", HttpStatus.CONFLICT),
+    CATEGORY_HAS_CHILDREN(6004, "Không thể xóa thư mục đang có danh mục con", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;

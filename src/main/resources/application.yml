@@ -2,7 +2,7 @@ spring:
   application:
     name: e-commerce-backend
   
-  # Cấu hình SQL Server - Linh hoạt cho cả Team và Local
+  # Cấu hình SQL Server
   datasource:
     url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:ecommerce_marketplace};encrypt=true;trustServerCertificate=true
     username: ${DB_USERNAME:sa}
@@ -11,19 +11,19 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update 
     show-sql: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: true
 
-  # Cấu hình Mail - Hợp nhất từ 2 bản
+  # Cấu hình Mail
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:your_email@gmail.com} 
+    password: ${MAIL_PASSWORD:your_app_password}
     properties:
       mail:
         smtp:
@@ -32,12 +32,14 @@ spring:
             enable: true
             required: true
 
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+# CẤU TRÚC JWT ĐÚNG CHO CÁCH 2 (KHỚP VỚI @Value("${jwt.expiration.access}"))
+jwt:
+  secret: ${JWT_SECRET:bXktc2VjcmV0LWtleS1mb3ItZWNvbW1lcmNlLW1hcmtldHBsYWNlLXByb2plY3QtMjAyNg==}
+  expiration:
+    access: ${JWT_ACCESS_EXPIRATION:900000}      # Tương ứng jwt.expiration.access
+    refresh: ${JWT_REFRESH_EXPIRATION:604800000} # Tương ứng jwt.expiration.refresh
 
-# Cấu hình Cloudinary (Sử dụng cấu hình từ khối app để đồng bộ)
+# Các cấu hình khác
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:dbmu3dtqu}
   api-key: ${CLOUDINARY_API_KEY:933636165794721}
@@ -46,17 +48,9 @@ cloudinary:
 server:
   port: 8080
 
-# Application Business Logic Configuration
 app:
   sepay:
     api-key: ${APP_SEPAY_API_KEY:demo_key}
-  
-  # JWT Configuration - Thống nhất thời gian hết hạn
-  jwt:
-    secret: ${JWT_SECRET:bXktc2VjcmV0LWtleS1mb3ItZWNvbW1lcmNlLW1hcmtldHBsYWNlLXByb2plY3QtMjAyNg==}
-    expiration:
-      access: 900000         # 15 phút
-      refresh: 604800000     # 7 ngày
 
 logging:
   level:
