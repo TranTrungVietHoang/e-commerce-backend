@@ -15,7 +15,7 @@ public class UpdateProductRequest {
     @Size(min = 10, max = 200, message = "Ten san pham phai tu 10-200 ky tu")
     private String name;
 
-    private Integer categoryId;
+    private Long categoryId;
 
     private String description;
 

@@ -1,23 +1,27 @@
 package com.ecommerce.service;
 
-import com.ecommerce.entity.Shop;
-import com.ecommerce.enums.ShopStatus;
+import com.ecommerce.dto.request.shop.ShopRegistrationRequest;
+import com.ecommerce.dto.request.shop.ShopUpdateRequest;
 import com.ecommerce.dto.response.PageResponse;
+import com.ecommerce.dto.response.shop.ShopResponse;
+import com.ecommerce.enums.ShopStatus;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface ShopService {
-    Shop createShop(Long sellerId, Shop shop);
+    ShopResponse createShop(Long sellerId, ShopRegistrationRequest request);
 
-    Shop updateShopInfo(Long shopId, Shop shop);
+    ShopResponse updateShopInfo(Long sellerId, ShopUpdateRequest request);
 
-    Shop getShopInfo(Long shopId);
+    ShopResponse getShopBySellerId(Long sellerId);
 
-    Shop getShopById(Long id);
+    ShopResponse getShopById(Long id);
 
-    List<Shop> getAllShops();
+    List<ShopResponse> getAllShops();
+    
+    List<ShopResponse> getPendingShops();
 
-    PageResponse<Shop> getShops(Pageable pageable);
+    PageResponse<ShopResponse> getShops(Pageable pageable);
 
     void approveShop(Long shopId, ShopStatus status);
 }

@@ -20,7 +20,7 @@ public class CreateProductRequest {
     private String name;
 
     @NotNull(message = "Vui long chon danh muc")
-    private Integer categoryId;
+    private Long categoryId;
 
     @NotBlank(message = "Vui long nhap mo ta san pham")
     private String description;
