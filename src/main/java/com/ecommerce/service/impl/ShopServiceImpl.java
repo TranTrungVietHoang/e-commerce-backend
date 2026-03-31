@@ -1,5 +1,9 @@
 package com.ecommerce.service.impl;
 
+import com.ecommerce.dto.request.shop.ShopRegistrationRequest;
+import com.ecommerce.dto.request.shop.ShopUpdateRequest;
+import com.ecommerce.dto.response.PageResponse;
+import com.ecommerce.dto.response.shop.ShopResponse;
 import com.ecommerce.entity.Shop;
 import com.ecommerce.entity.User;
 import com.ecommerce.enums.ShopStatus;
@@ -8,7 +12,6 @@ import com.ecommerce.exception.ErrorCode;
 import com.ecommerce.repository.ShopRepository;
 import com.ecommerce.repository.UserRepository;
 import com.ecommerce.service.ShopService;
-import com.ecommerce.dto.response.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,56 +29,97 @@ public class ShopServiceImpl implements ShopService {
     private final UserRepository userRepository;
 
     @Override
-    public Shop getShopInfo(Long shopId) {
-        return shopRepository.findById(shopId)
-                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+    public ShopResponse getShopBySellerId(Long sellerId) {
+        Shop shop = shopRepository.findBySellerId(sellerId)
+                .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
+        return mapToResponse(shop);
     }
 
     @Override
-    public Shop getShopById(Long id) {
-        return getShopInfo(id);
+    public ShopResponse getShopById(Long id) {
+        Shop shop = shopRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
+        return mapToResponse(shop);
     }
 
     @Override
-    public List<Shop> getAllShops() {
-        return shopRepository.findAll();
+    public List<ShopResponse> getAllShops() {
+        return shopRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ShopResponse> getPendingShops() {
+        return shopRepository.findByStatus(ShopStatus.PENDING).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public Shop createShop(Long sellerId, Shop shop) {
+    public ShopResponse createShop(Long sellerId, ShopRegistrationRequest request) {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         if (shopRepository.existsBySellerId(sellerId)) {
-            throw new AppException(ErrorCode.USER_ALREADY_EXISTS, "Người dùng đã có cửa hàng");
+            throw new AppException(ErrorCode.SHOP_ALREADY_EXISTS);
         }
 
-        shop.setSeller(seller);
-        shop.setStatus(ShopStatus.PENDING);
-        return shopRepository.save(shop);
+        if (shopRepository.existsByName(request.getName())) {
+            throw new AppException(ErrorCode.SHOP_NAME_EXISTS);
+        }
+
+        Shop shop = Shop.builder()
+                .seller(seller)
+                .name(request.getName())
+                .description(request.getDescription())
+                .logoUrl(request.getLogoUrl())
+                .bannerUrl(request.getBannerUrl())
+                .status(ShopStatus.PENDING)
+                .build();
+
+        shop = shopRepository.save(shop);
+        return mapToResponse(shop);
     }
 
     @Override
     @Transactional
-    public Shop updateShopInfo(Long shopId, Shop updateData) {
-        Shop existing = getShopInfo(shopId);
+    public ShopResponse updateShopInfo(Long sellerId, ShopUpdateRequest request) {
+        Shop existing = shopRepository.findBySellerId(sellerId)
+                .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
 
-        existing.setName(updateData.getName());
-        existing.setDescription(updateData.getDescription());
-        existing.setLogoUrl(updateData.getLogoUrl());
-        existing.setBannerUrl(updateData.getBannerUrl());
+        if (request.getName() != null && !request.getName().equals(existing.getName())) {
+            if (shopRepository.existsByName(request.getName())) {
+                throw new AppException(ErrorCode.SHOP_NAME_EXISTS);
+            }
+            existing.setName(request.getName());
+        }
 
-        return shopRepository.save(existing);
+        if (request.getDescription() != null) {
+            existing.setDescription(request.getDescription());
+        }
+        if (request.getLogoUrl() != null) {
+            existing.setLogoUrl(request.getLogoUrl());
+        }
+        if (request.getBannerUrl() != null) {
+            existing.setBannerUrl(request.getBannerUrl());
+        }
+
+        existing = shopRepository.save(existing);
+        return mapToResponse(existing);
     }
 
     @Override
-    public PageResponse<Shop> getShops(Pageable pageable) {
+    public PageResponse<ShopResponse> getShops(Pageable pageable) {
         Page<Shop> shopPage = shopRepository.findAll(pageable);
         
-        // Nếu dòng dưới vẫn báo lỗi "undefined", hãy xem bước 3 bên dưới
-        return PageResponse.<Shop>builder()
-                .content(shopPage.getContent())
+        List<ShopResponse> responses = shopPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return PageResponse.<ShopResponse>builder()
+                .content(responses)
                 .pageSize(shopPage.getSize())
                 .pageNumber(shopPage.getNumber())
                 .totalElements(shopPage.getTotalElements())
@@ -85,8 +130,25 @@ public class ShopServiceImpl implements ShopService {
     @Override
     @Transactional
     public void approveShop(Long shopId, ShopStatus status) {
-        Shop shop = getShopInfo(shopId);
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
         shop.setStatus(status);
         shopRepository.save(shop);
+    }
+
+    private ShopResponse mapToResponse(Shop shop) {
+        ShopResponse response = new ShopResponse();
+        response.setId(shop.getId());
+        response.setSellerId(shop.getSeller().getId());
+        response.setSellerName(shop.getSeller().getFullName());
+        response.setName(shop.getName());
+        response.setDescription(shop.getDescription());
+        response.setLogoUrl(shop.getLogoUrl());
+        response.setBannerUrl(shop.getBannerUrl());
+        response.setStatus(shop.getStatus());
+        response.setRating(shop.getRating());
+        response.setCreatedAt(shop.getCreatedAt());
+        response.setUpdatedAt(shop.getUpdatedAt());
+        return response;
     }
 }

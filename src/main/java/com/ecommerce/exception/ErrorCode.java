@@ -60,7 +60,14 @@ public enum ErrorCode {
     CATEGORY_NOT_FOUND(6001, "Danh mục không tồn tại", HttpStatus.NOT_FOUND),
     CATEGORY_ALREADY_EXISTS(6002, "Tên danh mục đã tồn tại", HttpStatus.CONFLICT),
     CATEGORY_SLUG_EXISTS(6003, "Đường dẫn (Slug) đã tồn tại", HttpStatus.CONFLICT),
-    CATEGORY_HAS_CHILDREN(6004, "Không thể xóa thư mục đang có danh mục con", HttpStatus.BAD_REQUEST);
+    CATEGORY_HAS_CHILDREN(6004, "Không thể xóa thư mục đang có danh mục con", HttpStatus.BAD_REQUEST),
+
+    // =========================================================
+    // SHOP (7xxx)
+    // =========================================================
+    SHOP_NOT_FOUND(7001, "Cửa hàng không tồn tại", HttpStatus.NOT_FOUND),
+    SHOP_ALREADY_EXISTS(7002, "Bạn đã đăng ký một cửa hàng rồi", HttpStatus.CONFLICT),
+    SHOP_NAME_EXISTS(7003, "Tên cửa hàng này đã được sử dụng", HttpStatus.CONFLICT);
 
     private final int code;
     private final String message;
