@@ -25,18 +25,19 @@ public class ShopSellerController {
     public ApiResponse<ShopResponse> registerShop(
             @AuthenticationPrincipal User user, // Giả sử UserDetails implementation là User entity
             @Valid @RequestBody ShopRegistrationRequest request) {
-        
+
         // sellerId lấy trực tiếp từ token để đảm bảo tính xác thực
         return ApiResponse.created(shopService.createShop(user.getId(), request));
     }
 
     // Cập nhật thông tin shop (Dành cho chủ shop)
     @PutMapping("/update")
-    @PreAuthorize("hasRole('SELLER')") // Chỉ người có quyền SELLER (hoặc đang duyệt) mới được sửa, tùy logic policy, ta dùng isAuthenticated cho đơn giản hoặc check Role.
+    @PreAuthorize("hasRole('SELLER')") // Chỉ người có quyền SELLER (hoặc đang duyệt) mới được sửa, tùy logic policy,
+                                       // ta dùng isAuthenticated cho đơn giản hoặc check Role.
     public ApiResponse<ShopResponse> updateShop(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody ShopUpdateRequest request) {
-        
+
         return ApiResponse.success(shopService.updateShopInfo(user.getId(), request));
     }
 

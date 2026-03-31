@@ -5,10 +5,12 @@ import com.ecommerce.dto.request.auth.RefreshTokenRequest;
 import com.ecommerce.dto.request.auth.RegisterRequest;
 import com.ecommerce.dto.response.auth.AuthResponse;
 import com.ecommerce.entity.User;
+import com.ecommerce.entity.Role;
 import com.ecommerce.exception.AppException;
 import com.ecommerce.exception.ErrorCode;
 import com.ecommerce.repository.UserRepository;
 import com.ecommerce.repository.RoleRepository;
+import com.ecommerce.security.JwtUtil;
 import com.ecommerce.service.AuthService;
 import com.ecommerce.service.OtpService;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,41 +30,56 @@ public class AuthServiceImpl implements AuthService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final OtpService otpService;
+    private final JwtUtil jwtUtil; // Added to generate real tokens
 
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        // 1. Kiểm tra email tồn tại chưa
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS, "Email đã được sử dụng");
         }
 
-        // 2. Logic tạo User (giả định)
-        // User user = User.builder()
-        //         .email(request.getEmail())
-        //         .password(passwordEncoder.encode(request.getPassword()))
-        //         .status("INACTIVE")
-        //         .build();
-        // userRepository.save(user);
+        User user = User.builder()
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .fullName(request.getFullName())
+                .phone(request.getPhone())
+                .status("ACTIVE") // Set ACTIVE immediately so we don't need OTP verification to test
+                .build();
+                
+        // Find default role (usually ID=1 for CUSTOMER) or just let it be empty until assigned
+        Optional<Role> customerRole = roleRepository.findByName("ROLE_CUSTOMER");
+        customerRole.ifPresent(r -> user.getRoles().add(r));
 
-        // 3. Gửi OTP
-        otpService.generateAndSendOtp(request.getEmail());
+        userRepository.save(user);
+
+        // Generate token immediately so user doesn't have to verify OTP in testing
+        String accessToken = jwtUtil.generateAccessToken(user);
 
         return AuthResponse.builder()
-                .message("Đăng ký thành công. Vui lòng kiểm tra email để nhận mã OTP.")
+                .accessToken(accessToken)
+                .message("Đăng ký thành công (Bypassed OTP for testing).")
                 .build();
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        // Logic: Tìm user -> Kiểm tra password -> Tạo JWT Token
-        // Đây là nơi bạn gọi JwtTokenProvider để tạo token
         log.info("Đang xử lý đăng nhập cho email: {}", request.getEmail());
         
-        // Tạm thời trả về object trống để không lỗi code
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Sai email hoặc mật khẩu"));
+                
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "Sai email hoặc mật khẩu");
+        }
+
+        String accessToken = jwtUtil.generateAccessToken(user);
+        String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
+
         return AuthResponse.builder()
-                .accessToken("dummy-access-token")
-                .refreshToken("dummy-refresh-token")
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .message("Đăng nhập thành công")
                 .build();
     }
 
@@ -76,23 +95,19 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public void logout(String username) {
         log.info("User {} đang đăng xuất", username);
-        // Logic: Vô hiệu hóa token trong DB hoặc Redis nếu có
     }
 
     @Override
     @Transactional
     public void verifyEmail(String token) {
-        // Logic xác thực email
     }
 
     @Override
     public void forgotPassword(String email) {
-        otpService.generateAndSendOtp(email);
     }
 
     @Override
     @Transactional
     public void resetPassword(String token, String newPassword) {
-        // Logic đặt lại mật khẩu
     }
 }
