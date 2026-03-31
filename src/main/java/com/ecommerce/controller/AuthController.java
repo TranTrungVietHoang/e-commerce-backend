@@ -47,7 +47,7 @@ public class AuthController {
     }
 
     // ==========================================
-    // Mật khẩu & OTP (Milestone 5)
+    // Mật khẩu & OTP
     // ==========================================
     
     @PostMapping("/forgot-password")
@@ -58,8 +58,6 @@ public class AuthController {
 
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse<Void>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
-        // Chỉ mang tính chất validate token có hợp lệ không trước khi chuyển sang màn reset password.
-        // Có thể gộp vào api reset cũng được.
         return ResponseEntity.ok(ApiResponse.success(null, "Mã OTP hợp lệ"));
     }
 
@@ -78,13 +76,11 @@ public class AuthController {
     
     @GetMapping("/oauth2/google")
     public ResponseEntity<ApiResponse<AuthResponse>> googleLogin(@RequestParam("code") String code) {
-        // TODO: Chức năng đăng nhập bằng Google sẽ làm sau
         return ResponseEntity.status(501).body(ApiResponse.<AuthResponse>builder().code(501).message("Tính năng đăng nhập Google đang được phát triển").build());
     }
 
     @GetMapping("/oauth2/github")
     public ResponseEntity<ApiResponse<AuthResponse>> githubLogin(@RequestParam("code") String code) {
-        // TODO: Chức năng đăng nhập bằng Github sẽ làm sau
         return ResponseEntity.status(501).body(ApiResponse.<AuthResponse>builder().code(501).message("Tính năng đăng nhập Github đang được phát triển").build());
     }
 }
