@@ -5,9 +5,6 @@ import org.springframework.http.HttpStatus;
 
 /**
  * Tập trung toàn bộ mã lỗi nghiệp vụ của hệ thống.
- * Mỗi enum là một loại lỗi có: HTTP status + message mặc định.
- * 
- * CÁCH DÙNG: throw new AppException(ErrorCode.EMAIL_EXISTS);
  */
 @Getter
 public enum ErrorCode {
@@ -19,6 +16,7 @@ public enum ErrorCode {
     INVALID_REQUEST(1001, "Dữ liệu đầu vào không hợp lệ", HttpStatus.BAD_REQUEST),
     RESOURCE_NOT_FOUND(1002, "Tài nguyên không tồn tại", HttpStatus.NOT_FOUND),
     ACCESS_DENIED(1003, "Không có quyền truy cập", HttpStatus.FORBIDDEN),
+    INVALID_KEY(1004, "Message key không hợp lệ", HttpStatus.BAD_REQUEST),
 
     // =========================================================
     // AUTH (2xxx)
@@ -29,6 +27,9 @@ public enum ErrorCode {
     USER_LOCKED(2004, "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin", HttpStatus.FORBIDDEN),
     INVALID_TOKEN(2005, "Token không hợp lệ hoặc đã hết hạn", HttpStatus.UNAUTHORIZED),
     TOKEN_EXPIRED(2006, "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại", HttpStatus.UNAUTHORIZED),
+    USER_ALREADY_EXISTS(2007, "Người dùng đã tồn tại", HttpStatus.CONFLICT),
+    UNAUTHORIZED(2008, "Chưa xác thực tài khoản", HttpStatus.UNAUTHORIZED),
+    FORBIDDEN(2009, "Bạn không có quyền thực hiện hành động này", HttpStatus.FORBIDDEN),
 
     // =========================================================
     // USER (3xxx)
@@ -36,19 +37,22 @@ public enum ErrorCode {
     USER_NOT_FOUND(3001, "Người dùng không tồn tại", HttpStatus.NOT_FOUND),
     WRONG_CURRENT_PASSWORD(3002, "Mật khẩu hiện tại không đúng", HttpStatus.BAD_REQUEST),
     PASSWORD_NOT_MATCH(3003, "Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST),
-
-    // =========================================================
-    // ADMIN (4xxx)
-    // =========================================================
-    CANNOT_LOCK_ADMIN(4001, "Không thể khóa tài khoản Admin khác", HttpStatus.FORBIDDEN),
+    INVALID_USERNAME(3004, "Tên người dùng phải có ít nhất 3 ký tự", HttpStatus.BAD_REQUEST),
+    INVALID_PASSWORD(3005, "Mật khẩu phải có ít nhất 8 ký tự", HttpStatus.BAD_REQUEST),
+    INVALID_EMAIL(3006, "Định dạng email không hợp lệ", HttpStatus.BAD_REQUEST),
 
     // =========================================================
     // OTP (5xxx)
     // =========================================================
     OTP_INVALID(5001, "Mã OTP không hợp lệ", HttpStatus.BAD_REQUEST),
-    OTP_EXPIRED(5002, "Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới", HttpStatus.BAD_REQUEST);
+    OTP_EXPIRED(5002, "Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới", HttpStatus.BAD_REQUEST),
+    OTP_INVALID_OR_EXPIRED(5003, "Mã OTP không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
+    VERIFICATION_TOKEN_NOT_FOUND(5004, "Token xác thực không tồn tại", HttpStatus.NOT_FOUND),
 
     // =========================================================
+    // ADMIN (4xxx)
+    // =========================================================
+    CANNOT_LOCK_ADMIN(4001, "Không thể khóa tài khoản Admin khác", HttpStatus.FORBIDDEN);
 
     private final int code;
     private final String message;
