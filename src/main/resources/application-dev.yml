@@ -1,0 +1,59 @@
+spring:
+  application:
+    name: e-commerce-backend-dev
+  datasource:
+    # H2 In-Memory Database for quick testing
+    url: jdbc:h2:mem:ecommerce_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MSSQLServer
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # Create tables on startup, drop on shutdown
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:test@gmail.com}
+    password: ${MAIL_PASSWORD:test_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# ============================================
+# Development-specific overrides
+# SEE: .env file for main configuration
+# ============================================
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dbmu3dtqu}
+  api-key: ${CLOUDINARY_API_KEY:933636165794721}
+  api-secret: ${CLOUDINARY_API_SECRET:V-yuGfCzd2DQXgVXJ3nldFuvqHI}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+logging:
+  level:
+    com.ecommerce: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+

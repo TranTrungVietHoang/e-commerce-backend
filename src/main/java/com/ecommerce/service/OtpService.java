@@ -10,6 +10,7 @@ import com.ecommerce.repository.VerificationTokenRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OtpService {
 
     private final UserRepository userRepository;
@@ -30,7 +32,7 @@ public class OtpService {
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenRepository refreshTokenRepository;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:noreply@gmail.com}")
     private String fromEmail;
 
     private static final int OTP_VALID_DURATION_MINUTES = 5;
@@ -38,29 +40,28 @@ public class OtpService {
 
     @Transactional
     public void generateAndSendOtp(String email) {
-        // Tìm user, không ném ngoại lệ nếu không tìm thấy để tránh lộ lọt tài khoản (Anti-enumeration)
+        // Tìm user, không ném ngoại lệ để tránh lộ lọt tài khoản (Anti-enumeration)
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
-            return;
+            log.warn("Yêu cầu OTP cho email không tồn tại: {}", email);
+            return; 
         }
 
-        // Xoá các OTP cũ cùng loại
+        // Xóa các token reset cũ trước khi tạo mới
         verificationTokenRepository.deleteByUserAndType(user, TYPE_PASSWORD_RESET);
 
-        // Sinh mã OTP ngẫu nhiên 6 số
         String otp = generateNumericOtp(6);
 
-        // Lưu vào DB
         VerificationToken token = VerificationToken.builder()
                 .user(user)
                 .token(otp)
                 .type(TYPE_PASSWORD_RESET)
                 .expiresAt(LocalDateTime.now().plusMinutes(OTP_VALID_DURATION_MINUTES))
+                .isUsed(false)
                 .build();
         
         verificationTokenRepository.save(token);
 
-        // Gửi email
         sendOtpEmail(user.getEmail(), user.getFullName(), otp);
     }
 
@@ -80,26 +81,22 @@ public class OtpService {
             
             helper.setFrom(fromEmail, "E-Commerce Market");
             helper.setTo(toEmail);
-            helper.setSubject("Mã xác nhận đăt lại mật khẩu");
+            helper.setSubject("Mã xác nhận đặt lại mật khẩu");
 
             String htmlMsg = "<div style='font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto;'>" +
                     "<h2 style='color: #4CAF50;'>Yêu cầu đặt lại mật khẩu</h2>" +
                     "<p>Xin chào <strong>" + fullName + "</strong>,</p>" +
-                    "<p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản của mình. Vui lòng sử dụng mã OTP gồm 6 chữ số dưới đây để tiếp tục:</p>" +
+                    "<p>Bạn vừa yêu cầu đặt lại mật khẩu. Vui lòng sử dụng mã OTP dưới đây:</p>" +
                     "<div style='background-color: #f4f4f4; border-radius: 5px; padding: 15px; text-align: center; margin: 20px 0;'>" +
                     "<h1 style='color: #333; margin: 0; letter-spacing: 5px; font-size: 32px;'>" + otp + "</h1>" +
                     "</div>" +
-                    "<p style='color: #f44336; font-size: 14px;'><strong>Lưu ý:</strong> Mã này chỉ có hiệu lực trong " + OTP_VALID_DURATION_MINUTES + " phút.</p>" +
-                    "<p>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>" +
-                    "<hr style='border: 1px solid #eee; margin-top: 30px;'/>" +
-                    "<p style='color: #777; font-size: 12px; text-align: center;'>Đội ngũ hỗ trợ E-Commerce Market</p>" +
+                    "<p style='color: #f44336; font-size: 14px;'><strong>Lưu ý:</strong> Mã có hiệu lực trong " + OTP_VALID_DURATION_MINUTES + " phút.</p>" +
                     "</div>";
 
             helper.setText(htmlMsg, true);
             mailSender.send(message);
-
         } catch (MessagingException | java.io.UnsupportedEncodingException e) {
-            e.printStackTrace();
+            log.error("Lỗi gửi mail đến {}: {}", toEmail, e.getMessage());
             throw new AppException(ErrorCode.UNCATEGORIZED_ERROR);
         }
     }
@@ -109,21 +106,23 @@ public class OtpService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        VerificationToken token = verificationTokenRepository.findByUserEmailAndTokenAndType(email, otp, "PASSWORD_RESET")
+        VerificationToken token = verificationTokenRepository
+                .findByUserEmailAndTokenAndType(email, otp, TYPE_PASSWORD_RESET)
                 .orElseThrow(() -> new AppException(ErrorCode.OTP_INVALID));
 
-        if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
+        if (token.isExpired() || token.getIsUsed()) {
             throw new AppException(ErrorCode.OTP_EXPIRED);
         }
 
-        // Đổi mật khẩu
+        // Cập nhật mật khẩu - Chú ý dùng tên field đúng (password hoặc passwordHash tùy Entity)
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        // Xoá token đã sử dụng
+        // Đánh dấu đã dùng và xóa để dọn dẹp
+        token.setIsUsed(true);
         verificationTokenRepository.delete(token);
 
-        // Xoá toàn bộ refresh token hiện có (ép đăng xuất tất cả thiết bị)
+        // Ép đăng xuất tất cả thiết bị để đảm bảo an toàn sau khi đổi pass
         refreshTokenRepository.deleteByUserId(user.getId());
     }
 }

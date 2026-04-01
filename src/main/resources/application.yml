@@ -3,9 +3,13 @@ spring:
     name: e-commerce-backend
   config:
     import: optional:file:.env[.properties]
+  
+  # ============================================
+  # Database Configuration (SQL Server)
+  # SEE: .env file for values
+  # DO NOT hardcode passwords here!
+  # ============================================
   datasource:
-    # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật (Dành cho Team)
-    # Hỗ trợ cả DB_URL toàn phần hoặc DB_HOST/DB_PORT/DB_NAME động lẫn hardcode local
     url: ${DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:ecommerce_marketplace};encrypt=true;trustServerCertificate=true}
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:}
@@ -13,16 +17,20 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: update 
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: true
 
+  # ============================================
+  # Email Configuration (Gmail SMTP)
+  # SEE: .env file for values
+  # ============================================
   mail:
-    host: smtp.gmail.com
-    port: 587
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
     properties:
@@ -31,31 +39,45 @@ spring:
           auth: true
           starttls:
             enable: true
+            required: true
 
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+# ============================================
+# JWT Configuration
+# SEE: .env file for values
+# ============================================
+jwt:
+  secret: ${JWT_SECRET}
+  expiration:
+    access: ${JWT_ACCESS_EXPIRATION}
+    refresh: ${JWT_REFRESH_EXPIRATION}
 
+# ============================================
+# Cloudinary Configuration (Image Storage)
+# SEE: .env file for values
+# ============================================
 cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:dbmu3dtqu}
-  api-key: ${CLOUDINARY_API_KEY:933636165794721}
-  api-secret: ${CLOUDINARY_API_SECRET:V-yuGfCzd2DQXgVXJ3nldFuvqHI}
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
+# ============================================
+# Sepay Payment Gateway Configuration
+# SEE: .env file for values
+# ============================================
+sepay:
+  api-id: ${SEPAY_API_ID}
+  api-key: ${SEPAY_API_KEY}
+  api-secret: ${SEPAY_API_SECRET}
+  api-url: ${SEPAY_API_URL}
+  webhook-secret: ${SEPAY_WEBHOOK_SECRET}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+
+app:
+  sepay:
+    api-key: ${APP_SEPAY_API_KEY}
 
 logging:
   level:
-    com.ecommerce: DEBUG
-
-# =============================================================
-# JWT Configuration
-# Secret phải là chuỗi Base64, >= 256 bits (32 bytes)
-# Sinh secret ngẫu nhiên: openssl rand -base64 64
-# =============================================================
-jwt:
-  secret: ${JWT_SECRET:bXktc2VjcmV0LWtleS1mb3ItZWNvbW1lcmNlLW1hcmtldHBsYWNlLXByb2plY3QtMjAyNg==}
-  expiration:
-    access: 900000        # 15 phút (milliseconds)
-    refresh: 604800000    # 7 ngày  (milliseconds)
+    com.ecommerce: ${LOGGING_LEVEL:DEBUG}

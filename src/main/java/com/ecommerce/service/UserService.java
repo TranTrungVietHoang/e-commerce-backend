@@ -74,6 +74,13 @@ public class UserService {
         userRepository.save(user);
     }
 
+    /**
+     * Lấy user ID từ email/username
+     */
+    public Long getUserIdByUsername(String email) {
+        return getUserByEmail(email).getId();
+    }
+
     private User getUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
