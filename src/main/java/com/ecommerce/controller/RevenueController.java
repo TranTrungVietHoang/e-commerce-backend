@@ -36,8 +36,8 @@ public class RevenueController {
         } catch (Exception e) {
             log.error("Lỗi lấy thống kê doanh thu: {}", e.getMessage());
             @SuppressWarnings("unchecked")
-            ApiResponse<RevenueStatisticsResponse> errorResponse = 
-                (ApiResponse<RevenueStatisticsResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            ApiResponse<RevenueStatisticsResponse> errorResponse = (ApiResponse<RevenueStatisticsResponse>) (Object) ApiResponse
+                    .error(400, e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
@@ -56,8 +56,28 @@ public class RevenueController {
         } catch (Exception e) {
             log.error("Lỗi lấy thống kê nền tảng: {}", e.getMessage());
             @SuppressWarnings("unchecked")
-            ApiResponse<RevenueStatisticsResponse> errorResponse = 
-                (ApiResponse<RevenueStatisticsResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            ApiResponse<RevenueStatisticsResponse> errorResponse = (ApiResponse<RevenueStatisticsResponse>) (Object) ApiResponse
+                    .error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * GET /api/v1/revenue/platform/top-products?limit=10
+     * Lấy top 10 sản phẩm bán chạy nhất toàn sàn (Admin only)
+     */
+    @GetMapping("/platform/top-products")
+    public ResponseEntity<ApiResponse<List<TopProductResponse>>> getPlatformTopProducts(
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            log.info("Lấy top {} sản phẩm của toàn sàn", limit);
+            List<TopProductResponse> response = revenueService.getPlatformTopProducts(limit);
+            return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Lỗi lấy platform top products: {}", e.getMessage());
+            @SuppressWarnings("unchecked")
+            ApiResponse<List<TopProductResponse>> errorResponse = (ApiResponse<List<TopProductResponse>>) (Object) ApiResponse
+                    .error(400, e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
@@ -77,8 +97,8 @@ public class RevenueController {
         } catch (Exception e) {
             log.error("Lỗi lấy top products: {}", e.getMessage());
             @SuppressWarnings("unchecked")
-            ApiResponse<List<TopProductResponse>> errorResponse = 
-                (ApiResponse<List<TopProductResponse>>) (Object) ApiResponse.error(400, e.getMessage());
+            ApiResponse<List<TopProductResponse>> errorResponse = (ApiResponse<List<TopProductResponse>>) (Object) ApiResponse
+                    .error(400, e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }
@@ -97,8 +117,8 @@ public class RevenueController {
         } catch (Exception e) {
             log.error("Lỗi lấy doanh thu hôm nay: {}", e.getMessage());
             @SuppressWarnings("unchecked")
-            ApiResponse<RevenueStatisticsResponse> errorResponse = 
-                (ApiResponse<RevenueStatisticsResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            ApiResponse<RevenueStatisticsResponse> errorResponse = (ApiResponse<RevenueStatisticsResponse>) (Object) ApiResponse
+                    .error(400, e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }

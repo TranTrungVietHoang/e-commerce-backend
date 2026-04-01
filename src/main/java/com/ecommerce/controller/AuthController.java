@@ -42,7 +42,9 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(@AuthenticationPrincipal UserDetails userDetails) {
-        authService.logout(userDetails.getUsername());
+        if (userDetails != null) {
+            authService.logout(userDetails.getUsername());
+        }
         return ResponseEntity.ok(ApiResponse.success(null, "Đăng xuất thành công"));
     }
 
