@@ -25,12 +25,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Optional<Product> findBySlug(String slug);
 
     // 8 sản phẩm mới nhất còn active
-    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' ORDER BY p.createdAt DESC")
-    List<Product> findTop8ByOrderByCreatedAtDesc(Pageable pageable);
+    List<Product> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
 
     // 8 sản phẩm bán chạy nhất còn active
-    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' ORDER BY p.soldCount DESC")
-    List<Product> findTop8ByOrderBySoldCountDesc(Pageable pageable);
+    List<Product> findByStatusOrderBySoldCountDesc(String status, Pageable pageable);
 
     // Autocomplete suggestions – tìm theo tên, giới hạn kết quả
     @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
