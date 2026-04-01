@@ -12,12 +12,23 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import com.ecommerce.dto.request.ChatMessageRequest;
+import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/v1/chats")
 @RequiredArgsConstructor
 public class ChatController {
 
     private final ChatService chatService;
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<ChatMessageResponse>> sendMessage(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody ChatMessageRequest request) {
+        ChatMessageResponse response = chatService.sendMessage(user.getId(), request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     @GetMapping("/conversations")
     public ResponseEntity<ApiResponse<List<ConversationSummaryResponse>>> getRecentConversations(@AuthenticationPrincipal User user) {
