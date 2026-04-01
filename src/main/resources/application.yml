@@ -1,10 +1,12 @@
 spring:
   application:
     name: e-commerce-backend
+  config:
+    import: optional:file:.env[.properties]
   datasource:
     # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật (Dành cho Team)
-    # Hỗ trợ cả DB_HOST/DB_PORT/DB_NAME động (từ develop) lẫn hardcode local
-    url: jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:ecommerce_marketplace};encrypt=true;trustServerCertificate=true
+    # Hỗ trợ cả DB_URL toàn phần hoặc DB_HOST/DB_PORT/DB_NAME động lẫn hardcode local
+    url: ${DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:ecommerce_marketplace};encrypt=true;trustServerCertificate=true}
     username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
@@ -21,8 +23,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
