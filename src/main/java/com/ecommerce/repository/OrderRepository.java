@@ -30,6 +30,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT o FROM Order o WHERE o.shop.id = :shopId AND o.status = :status")
     List<Order> findByShopIdAndStatus(@Param("shopId") Long shopId, @Param("status") String status);
 
+    // Tìm tất cả đơn hàng theo trạng thái trên toàn hệ thống (cho Admin)
+    List<Order> findByStatus(String status);
+
     @Query("SELECT COUNT(o) FROM Order o WHERE o.shop.id = :shopId AND o.status = 'DELIVERED'")
     Long countDeliveredOrdersByShop(@Param("shopId") Long shopId);
 

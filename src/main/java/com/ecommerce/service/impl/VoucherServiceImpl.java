@@ -144,6 +144,8 @@ public class VoucherServiceImpl implements VoucherService {
 
         VoucherApplyResponse response = new VoucherApplyResponse();
         response.setCode(voucher.getCode());
+        response.setDiscountType(voucher.getDiscountType());
+        response.setDiscountValue(voucher.getDiscountValue());
         response.setOrderValue(orderValue);
         response.setDiscountAmount(discountAmount);
         response.setFinalAmount(orderValue.subtract(discountAmount));

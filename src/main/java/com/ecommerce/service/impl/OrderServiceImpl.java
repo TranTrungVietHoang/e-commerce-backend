@@ -190,6 +190,20 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public OrderDetailResponse getShopOrderDetail(Long orderId, Long shopId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+
+        // Kiểm tra order có thuộc về shop này không
+        if (!order.getShop().getId().equals(shopId)) {
+            throw new BusinessException("Đơn hàng này không thuộc về shop bạn");
+        }
+
+        return toDetailResponse(order);
+    }
+
+    @Override
     public OrderDetailResponse updateOrderStatus(Long orderId, String newStatus, Long sellerId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
@@ -226,8 +240,8 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderRepository.findByIdAndCustomerId(orderId, customerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
 
-        if (!"PENDING".equals(order.getStatus())) {
-            throw new BusinessException("Chỉ có thể hủy đơn ở trạng thái PENDING");
+        if (!order.getStatus().matches("PENDING|CONFIRMED")) {
+            throw new BusinessException("Chỉ có thể hủy đơn ở trạng thái PENDING hoặc ĐÃ XÁC NHẬN");
         }
 
         // Hoàn lại kho
@@ -251,6 +265,46 @@ public class OrderServiceImpl implements OrderService {
         orderStatusHistoryRepository.save(history);
 
         log.info("Hủy đơn hàng: orderId={}", orderId);
+
+        return toDetailResponse(updatedOrder);
+    }
+
+    @Override
+    public OrderDetailResponse cancelShopOrder(Long orderId, Long shopId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
+
+        // Kiểm tra shop ownership
+        if (!order.getShop().getId().equals(shopId)) {
+            throw new BusinessException("Đơn hàng này không thuộc về shop bạn");
+        }
+
+        // Chỉ cho phép hủy đơn ở trạng thái PENDING hoặc CONFIRMED
+        if (!order.getStatus().matches("PENDING|CONFIRMED")) {
+            throw new BusinessException("Chỉ có thể hủy đơn ở trạng thái PENDING hoặc ĐÃ XÁC NHẬN");
+        }
+
+        // Hoàn lại kho
+        for (OrderItem item : order.getItems()) {
+            if (item.getVariant() != null) {
+                item.getVariant().setStock(item.getVariant().getStock() + item.getQuantity());
+                productVariantRepository.save(item.getVariant());
+            } else {
+                item.getProduct().setStockQuantity(item.getProduct().getStockQuantity() + item.getQuantity());
+                productRepository.save(item.getProduct());
+            }
+        }
+
+        order.setStatus("CANCELLED");
+        Order updatedOrder = orderRepository.save(order);
+
+        OrderStatusHistory history = new OrderStatusHistory();
+        history.setOrder(updatedOrder);
+        history.setStatus("CANCELLED");
+        history.setNote("Đơn hàng bị hủy bởi shop");
+        orderStatusHistoryRepository.save(history);
+
+        log.info("Hủy đơn hàng shop: orderId={}, shopId={}", orderId, shopId);
 
         return toDetailResponse(updatedOrder);
     }

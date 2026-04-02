@@ -98,6 +98,30 @@ public class OrderController {
     }
 
     /**
+     * GET /api/v1/orders/shop/{shopId}/{orderId}
+     * Chi tiết đơn hàng của shop (cho seller) - MUST come before getShopOrders
+     */
+    @GetMapping("/shop/{shopId}/{orderId}")
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> getShopOrderDetail(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long shopId,
+            @PathVariable Long orderId) {
+        try {
+            Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+            log.info("Lấy chi tiết đơn của shop: shopId={}, orderId={}, userId={}", shopId, orderId, userId);
+            
+            // Lấy chi tiết đơn hàng cho seller
+            OrderDetailResponse response = orderService.getShopOrderDetail(orderId, shopId);
+            return new ResponseEntity<>(ApiResponse.success(response), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Lỗi lấy chi tiết đơn shop: orderId={}, shopId={}, error: {}", orderId, shopId, e.getMessage());
+            @SuppressWarnings("unchecked")
+            ApiResponse<OrderDetailResponse> errorResponse = (ApiResponse<OrderDetailResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
      * GET /api/v1/orders/shop/{shopId}
      * Danh sách đơn hàng của shop (cho seller)
      */
@@ -140,6 +164,29 @@ public class OrderController {
             return new ResponseEntity<>(ApiResponse.success(response, "Cập nhật trạng thái thành công"), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Lỗi cập nhật trạng thái: {}", e.getMessage());
+            @SuppressWarnings("unchecked")
+            ApiResponse<OrderDetailResponse> errorResponse = (ApiResponse<OrderDetailResponse>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * PUT /api/v1/orders/shop/{shopId}/{orderId}/cancel
+     * Hủy đơn hàng (seller only, hủy được đơn ở trạng thái PENDING hoặc CONFIRMED)
+     */
+    @PutMapping("/shop/{shopId}/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> cancelShopOrder(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long shopId,
+            @PathVariable Long orderId) {
+        try {
+            Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+            log.info("Hủy đơn hàng shop: orderId={}, shopId={}, userId={}", orderId, shopId, userId);
+            
+            OrderDetailResponse response = orderService.cancelShopOrder(orderId, shopId);
+            return new ResponseEntity<>(ApiResponse.success(response, "Hủy đơn hàng thành công"), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Lỗi hủy đơn hàng shop: orderId={}, shopId={}, error: {}", orderId, shopId, e.getMessage());
             @SuppressWarnings("unchecked")
             ApiResponse<OrderDetailResponse> errorResponse = (ApiResponse<OrderDetailResponse>) (Object) ApiResponse.error(400, e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);

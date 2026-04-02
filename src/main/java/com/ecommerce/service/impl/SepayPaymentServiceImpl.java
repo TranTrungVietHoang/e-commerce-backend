@@ -131,6 +131,7 @@ public class SepayPaymentServiceImpl implements PaymentService {
                 Map qrData = (Map) response.get("data");
                 return PaymentQrResponse.builder()
                         .orderId(request.getOrderId())
+                        .amount(request.getAmount())
                         .transferContent(transferContent)
                         .qrCodeBase64((String) qrData.get("qr_code"))
                         .expiresAt(Instant.now().plusSeconds(900).toEpochMilli()) // 15 phút
@@ -151,6 +152,7 @@ public class SepayPaymentServiceImpl implements PaymentService {
         
         return PaymentQrResponse.builder()
                 .orderId(request.getOrderId())
+                .amount(request.getAmount())
                 .transferContent(transferContent)
                 .qrCode(qrUrl)
                 .expiresAt(Instant.now().plusSeconds(900).toEpochMilli()) // 15 phút

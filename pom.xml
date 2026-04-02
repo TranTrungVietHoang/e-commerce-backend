@@ -145,6 +145,7 @@
                             <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
+                    <jvmArguments>-Xmx1024m -XX:MetaspaceSize=256m</jvmArguments>
                 </configuration>
             </plugin>
         </plugins>
