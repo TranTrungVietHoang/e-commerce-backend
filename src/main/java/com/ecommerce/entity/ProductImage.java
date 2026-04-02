@@ -24,4 +24,9 @@ public class ProductImage {
 
     @Column(name = "is_primary")
     private Boolean isPrimary = false;
+
+    // Explicit setters to avoid IDE/Lombok cache issues
+    public void setProduct(Product product) { this.product = product; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public void setIsPrimary(Boolean isPrimary) { this.isPrimary = isPrimary; }
 }

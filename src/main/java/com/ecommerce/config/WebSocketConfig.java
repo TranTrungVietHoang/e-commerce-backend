@@ -36,11 +36,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Khai báo endpoint /ws. Frontend sẽ kết nối tới wss://domain/ws
-        // withSockJS() tạo fallback nếu browser không hỗ trợ native websocket
+        // Endpoint 1: có SockJS fallback (dùng cho backend test tools)
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("http://localhost:3000", "http://localhost:5173")
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
+
+        // Endpoint 2: Native WebSocket thuần (cho Vite React FE dùng @stomp/stompjs trực tiếp)
+        registry.addEndpoint("/ws-native")
+                .setAllowedOriginPatterns("*");
     }
 
     @Override

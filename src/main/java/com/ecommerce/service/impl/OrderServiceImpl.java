@@ -269,6 +269,17 @@ public class OrderServiceImpl implements OrderService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Long checkPurchase(Long userId, Long productId) {
+        log.info("Xác thực mua hàng: userId={}, productId={}", userId, productId);
+        List<OrderItem> items = orderItemRepository.findDeliveredItemByUserAndProduct(userId, productId);
+        if (items != null && !items.isEmpty()) {
+            return items.get(0).getId();
+        }
+        return null;
+    }
+
     // ==================== PRIVATE METHODS ====================
 
     private OrderDetailResponse toDetailResponse(Order order) {

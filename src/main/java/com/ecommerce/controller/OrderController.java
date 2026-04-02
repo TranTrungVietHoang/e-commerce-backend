@@ -20,8 +20,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
-import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/v1/orders")
@@ -182,6 +182,30 @@ public class OrderController {
             log.error("Lỗi lấy lịch sử trạng thái: {}", e.getMessage());
             @SuppressWarnings("unchecked")
             ApiResponse<List<OrderStatusHistoryResponse>> errorResponse = (ApiResponse<List<OrderStatusHistoryResponse>>) (Object) ApiResponse.error(400, e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
+        }
+    }
+    /**
+     * GET /api/v1/orders/verify-purchase/{productId}
+     * Kiểm tra xem người dùng hiện tại đã mua và nhận hàng sản phẩm này chưa
+     */
+    @GetMapping("/verify-purchase/{productId}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> verifyPurchase(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @PathVariable Long productId) {
+        try {
+            Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+            Long orderItemId = orderService.checkPurchase(userId, productId);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("canReview", orderItemId != null);
+            result.put("orderItemId", orderItemId);
+            
+            return new ResponseEntity<>(ApiResponse.success(result), HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Lỗi xác thực mua hàng: {}", e.getMessage());
+            @SuppressWarnings("unchecked")
+            ApiResponse<Map<String, Object>> errorResponse = (ApiResponse<Map<String, Object>>) (Object) ApiResponse.error(400, e.getMessage());
             return new ResponseEntity<>(errorResponse, HttpStatus.BAD_REQUEST);
         }
     }

@@ -49,4 +49,10 @@ public interface OrderService {
      * Xem lịch sử trạng thái của đơn
      */
     List<com.ecommerce.dto.response.order.OrderStatusHistoryResponse> getOrderStatusHistory(Long orderId);
+
+    /**
+     * Kiểm tra xem khách hàng đã mua và nhận thành công sản phẩm chưa (để được đánh giá)
+     * @return orderItemId nếu hợp lệ, null nếu chưa mua/chưa giao
+     */
+    Long checkPurchase(Long userId, Long productId);
 }
