@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 /**
  * Response chứa QR code thanh toán từ Sepay
  */
@@ -19,4 +21,5 @@ public class PaymentQrResponse {
     private String transferContent;  // Nội dung chuyển khoản
     private Long expiresAt;          // Hết hạn lúc (timestamp)
     private String status;           // PENDING, PAID, EXPIRED, CANCELLED
+    private BigDecimal amount;       // Số tiền thanh toán
 }

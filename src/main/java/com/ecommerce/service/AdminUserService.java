@@ -75,6 +75,7 @@ public class AdminUserService {
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .status(user.getStatus())
+                .avatarUrl(user.getAvatarUrl())
                 .roles(roles)
                 .build();
     }

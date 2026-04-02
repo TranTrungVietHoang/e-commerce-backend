@@ -6,6 +6,7 @@ import com.ecommerce.dto.response.user.UserResponse;
 import com.ecommerce.entity.User;
 import com.ecommerce.exception.AppException;
 import com.ecommerce.exception.ErrorCode;
+import com.ecommerce.repository.ShopRepository;
 import com.ecommerce.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final ShopRepository shopRepository;
     private final PasswordEncoder passwordEncoder;
     private final CloudinaryService cloudinaryService;
 
@@ -90,6 +92,15 @@ public class UserService {
         List<String> roles = user.getRoles().stream()
                 .map(r -> r.getName())
                 .collect(Collectors.toList());
+        
+        // Lấy shopId nếu user là seller
+        Long shopId = null;
+        if (roles.contains("ROLE_SELLER")) {
+            shopId = shopRepository.findBySellerId(user.getId())
+                    .map(shop -> shop.getId())
+                    .orElse(null);
+        }
+        
         return UserResponse.builder()
                 .id(user.getId())
                 .email(user.getEmail())
@@ -98,6 +109,7 @@ public class UserService {
                 .status(user.getStatus())
                 .avatarUrl(user.getAvatarUrl())
                 .roles(roles)
+                .shopId(shopId)
                 .build();
     }
 }

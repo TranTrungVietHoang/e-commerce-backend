@@ -25,6 +25,8 @@ public class UpdateProductRequest {
 
     private String status;
 
+    private Integer stockQuantity;
+
     private List<String> imageUrls;
 
     @Valid
