@@ -58,10 +58,10 @@ public class RevenueServiceImpl implements RevenueService {
 
     @Override
     public RevenueStatisticsResponse getPlatformRevenue(String period) {
-        log.info("Lấy thống kê doanh thu nền tảng: period={}", period);
+        log.info("Lấy thống kê doanh thu toàn sàn: period={}", period);
 
-        // Lấy tất cả đơn DELIVERED
-        List<Order> allOrders = orderRepository.findByShopIdAndStatus(0L, "DELIVERED"); // TODO: Thay bằng query toàn nền tảng
+        // Lấy tất cả đơn DELIVERED trên hệ thống
+        List<Order> allOrders = orderRepository.findByStatus("DELIVERED");
 
         Long totalOrders = (long) allOrders.size();
         BigDecimal totalRevenue = allOrders.stream()
@@ -86,9 +86,18 @@ public class RevenueServiceImpl implements RevenueService {
     @Override
     public List<TopProductResponse> getTopProducts(Long shopId, int limit) {
         log.info("Lấy top {} sản phẩm bán chạy của shop: shopId={}", limit, shopId);
-
         List<Order> orders = orderRepository.findByShopIdAndStatus(shopId, "DELIVERED");
+        return calculateTopProducts(orders, limit);
+    }
 
+    @Override
+    public List<TopProductResponse> getPlatformTopProducts(int limit) {
+        log.info("Lấy top {} sản phẩm bán chạy toàn hệ thống", limit);
+        List<Order> allOrders = orderRepository.findByStatus("DELIVERED");
+        return calculateTopProducts(allOrders, limit);
+    }
+
+    private List<TopProductResponse> calculateTopProducts(List<Order> orders, int limit) {
         Map<Long, TopProductData> productMap = new HashMap<>();
 
         for (Order order : orders) {

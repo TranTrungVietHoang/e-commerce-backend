@@ -23,6 +23,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     Optional<Product> findByIdAndShopId(Long id, Long shopId);
     Optional<Product> findBySlug(String slug);
+    long countByStatus(String status);
 
     // 8 sản phẩm mới nhất còn active
     List<Product> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);

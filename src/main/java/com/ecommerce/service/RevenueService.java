@@ -23,6 +23,11 @@ public interface RevenueService {
     java.util.List<com.ecommerce.dto.response.revenue.TopProductResponse> getTopProducts(Long shopId, int limit);
 
     /**
+     * Lấy top sản phẩm bán chạy nhất toàn sàn (Admin only)
+     */
+    java.util.List<com.ecommerce.dto.response.revenue.TopProductResponse> getPlatformTopProducts(int limit);
+
+    /**
      * Lấy thống kê doanh thu hôm nay
      */
     RevenueStatisticsResponse getTodayRevenue(Long shopId);

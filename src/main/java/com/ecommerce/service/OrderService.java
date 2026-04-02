@@ -35,6 +35,11 @@ public interface OrderService {
     Page<OrderListResponse> getShopOrders(Long shopId, Pageable pageable);
 
     /**
+     * Chi tiết đơn hàng của shop (cho seller)
+     */
+    OrderDetailResponse getShopOrderDetail(Long orderId, Long shopId);
+
+    /**
      * Cập nhật trạng thái đơn (Seller only)
      * PENDING -> CONFIRMED -> SHIPPING -> DELIVERED
      */
@@ -44,6 +49,11 @@ public interface OrderService {
      * Hủy đơn hàng (khách hàng hủy đơn chưa confirm)
      */
     OrderDetailResponse cancelOrder(Long orderId, Long customerId);
+
+    /**
+     * Hủy đơn hàng (seller hủy đơn ở trạng thái PENDING hoặc CONFIRMED)
+     */
+    OrderDetailResponse cancelShopOrder(Long orderId, Long shopId);
 
     /**
      * Xem lịch sử trạng thái của đơn
