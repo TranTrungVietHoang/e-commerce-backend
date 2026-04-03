@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -96,5 +97,31 @@ public class ProductController {
             @RequestParam Long shopId) {
         List<LowStockVariantResponse> response = productService.getLowStockVariants(shopId);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    // Admin APIs
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Page<ProductResponse>>> getAllProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.success(productService.getAllProducts(page, size)));
+    }
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<ProductDetailResponse>> updateProductStatus(
+            @PathVariable Long id,
+            @RequestParam String status,
+            @RequestParam(required = false) String reason) {
+        return ResponseEntity.ok(ApiResponse.success(productService.updateProductStatus(id, status, reason)));
+    }
+
+    @PutMapping("/seller/{id}/status")
+    public ResponseEntity<ApiResponse<ProductDetailResponse>> updateProductStatusForSeller(
+            @PathVariable Long id,
+            @RequestParam Long shopId,
+            @RequestParam String status) {
+        return ResponseEntity.ok(ApiResponse.success(productService.updateProductStatusForSeller(id, status, shopId)));
     }
 }
