@@ -25,8 +25,14 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // Tìm đơn hàng theo ID và shop (để kiểm tra quyền)
     Optional<Order> findByIdAndShopId(Long id, Long shopId);
 
-    // Tìm đơn theo trạng thái cho shop
+    // Tìm đơn theo trạng thái cho shop (Phân trang - cho danh sách đơn)
     Page<Order> findByShopIdAndStatus(Long shopId, OrderStatus status, Pageable pageable);
+
+    // Tìm đơn theo trạng thái cho shop (Danh sách - cho thống kê doanh thu)
+    java.util.List<Order> findByShopIdAndStatus(Long shopId, OrderStatus status);
+
+    // Tìm đơn theo trạng thái toàn sàn (Danh sách - cho thống kê sàn)
+    java.util.List<Order> findByStatus(OrderStatus status);
 
     // Tìm đơn theo trạng thái cho khách hàng
     Page<Order> findByCustomerIdAndStatus(Long customerId, OrderStatus status, Pageable pageable);
