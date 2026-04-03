@@ -58,6 +58,10 @@ public class Shop {
     @Schema(description = "Đánh giá trung bình")
     private BigDecimal rating = BigDecimal.ZERO;
 
+    @Column(name = "rejection_reason", columnDefinition = "NVARCHAR(MAX)")
+    @Schema(description = "Lý do từ chối duyệt (nếu có)")
+    private String rejectionReason;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

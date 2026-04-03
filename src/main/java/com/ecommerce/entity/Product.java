@@ -64,6 +64,9 @@ public class Product {
     @Column(name = "sold_count")
     private Long soldCount = 0L;
 
+    @Column(name = "status_reason", columnDefinition = "NVARCHAR(MAX)")
+    private String statusReason;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 

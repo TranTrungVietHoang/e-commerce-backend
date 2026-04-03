@@ -4,6 +4,8 @@ import com.ecommerce.entity.Shop;
 import com.ecommerce.entity.User;
 import com.ecommerce.enums.ShopStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -29,4 +31,14 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
 
     // 5. Kiểm tra xem một User đã có Shop chưa (Vì quan hệ là OneToOne)
     boolean existsBySellerId(Long sellerId);
+
+    // 6. Lấy chi tiết Shop kèm thông tin Seller (JOIN FETCH tránh LazyLoad lỗi 500)
+    @Query("SELECT s FROM Shop s JOIN FETCH s.seller WHERE s.id = :id")
+    Optional<Shop> findByIdWithSeller(@Param("id") Long id);
+
+    @Query("SELECT s FROM Shop s JOIN FETCH s.seller")
+    List<Shop> findAllWithSeller();
+
+    @Query("SELECT s FROM Shop s JOIN FETCH s.seller WHERE s.status = :status")
+    List<Shop> findByStatusWithSeller(@Param("status") ShopStatus status);
 }
