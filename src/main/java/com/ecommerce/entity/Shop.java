@@ -79,4 +79,56 @@ public class Shop {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    // =========================================================
+    // Manual Getters/Setters as a fallback for Lombok issues
+    // =========================================================
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public BigDecimal getRating() {
+        return rating;
+    }
+
+    public void setRating(BigDecimal rating) {
+        this.rating = rating;
+    }
+
+    public User getSeller() {
+        return seller;
+    }
+
+    public void setSeller(User seller) {
+        this.seller = seller;
+    }
+
+    public ShopStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ShopStatus status) {
+        this.status = status;
+    }
 }
