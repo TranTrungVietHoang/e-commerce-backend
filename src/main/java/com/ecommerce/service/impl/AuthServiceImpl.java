@@ -48,21 +48,19 @@ public class AuthServiceImpl implements AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .fullName(request.getFullName())
                 .phone(request.getPhone())
-                .status("ACTIVE") // Set ACTIVE immediately so we don't need OTP verification to test
+                .status("ACTIVE")
                 .build();
                 
-        // Find default role (usually ID=1 for CUSTOMER) or just let it be empty until assigned
         Optional<Role> customerRole = roleRepository.findByName("ROLE_CUSTOMER");
         customerRole.ifPresent(r -> user.getRoles().add(r));
 
         userRepository.save(user);
 
-        // Generate token immediately so user doesn't have to verify OTP in testing
         String accessToken = jwtUtil.generateAccessToken(user);
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
-                .message("Đăng ký thành công (Bypassed OTP for testing).")
+                .message("Đăng ký thành công")
                 .build();
     }
 
@@ -109,7 +107,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         log.info("Đang làm mới token");
-        // Extract email from refresh token and generate new access token
+        
+        if (!jwtUtil.validateToken(request.getRefreshToken())) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "Refresh Token không hợp lệ hoặc đã hết hạn");
+        }
+
         String email = jwtUtil.extractUsername(request.getRefreshToken());
         
         User user = userRepository.findByEmail(email)

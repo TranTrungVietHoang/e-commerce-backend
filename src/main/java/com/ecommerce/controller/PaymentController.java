@@ -5,6 +5,7 @@ import com.ecommerce.dto.response.ApiResponse;
 import com.ecommerce.dto.response.payment.PaymentQrResponse;
 import com.ecommerce.service.PaymentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,9 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentController {
 
     private final PaymentService paymentService;
+
+    @org.springframework.beans.factory.annotation.Value("${sepay.webhook-secret:}")
+    private String webhookSecret;
 
     /**
      * Tạo QR code thanh toán Sepay
@@ -36,7 +40,16 @@ public class PaymentController {
      * POST /api/v1/payments/sepay/webhook
      */
     @PostMapping("/sepay/webhook")
-    public ResponseEntity<ApiResponse<Void>> sepayWebhook(@RequestBody java.util.Map<String, Object> payload) {
+    public ResponseEntity<ApiResponse<Void>> sepayWebhook(
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestBody java.util.Map<String, Object> payload) {
+        
+        if (webhookSecret != null && !webhookSecret.isEmpty()) {
+            if (authorization == null || !authorization.contains(webhookSecret)) {
+                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+            }
+        }
+
         // SePay gửi webhook dạng JSON body
         String content = payload.containsKey("content") ? payload.get("content").toString().toUpperCase() : "";
         String transactionId = payload.containsKey("id") ? payload.get("id").toString() : "";

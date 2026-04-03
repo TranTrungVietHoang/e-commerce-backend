@@ -16,6 +16,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.access.prepost.PreAuthorize;
+import com.ecommerce.service.UserService;
+import com.ecommerce.repository.ShopRepository;
+import com.ecommerce.exception.BusinessException;
 
 import java.util.List;
 
@@ -27,8 +33,18 @@ public class ProductController {
 
     private final ProductService productService;
     private final com.ecommerce.service.FileService fileService;
+    private final UserService userService;
+    private final ShopRepository shopRepository;
+
+    private Long getShopIdFromUser(UserDetails userDetails) {
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return shopRepository.findBySellerId(userId)
+                .orElseThrow(() -> new BusinessException("Bạn chưa mở shop hoặc shop không tồn tại"))
+                .getId();
+    }
 
     @PostMapping("/upload")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     public ResponseEntity<ApiResponse<?>> uploadImage(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
         try {
             String url = fileService.uploadFile(file);
@@ -39,9 +55,11 @@ public class ProductController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     public ResponseEntity<ApiResponse<ProductDetailResponse>> createProduct(
-            @RequestParam Long shopId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody CreateProductRequest request) {
+        Long shopId = getShopIdFromUser(userDetails);
         ProductDetailResponse response = productService.createProduct(request, shopId);
         return new ResponseEntity<>(ApiResponse.created(response), HttpStatus.CREATED);
     }
@@ -70,35 +88,43 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     public ResponseEntity<ApiResponse<ProductDetailResponse>> updateProduct(
             @PathVariable Long id,
-            @RequestParam Long shopId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody UpdateProductRequest request) {
+        Long shopId = getShopIdFromUser(userDetails);
         ProductDetailResponse response = productService.updateProduct(id, request, shopId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteProduct(
             @PathVariable Long id,
-            @RequestParam Long shopId) {
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long shopId = getShopIdFromUser(userDetails);
         productService.softDeleteProduct(id, shopId);
         return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     // Inventory APIs
     @PatchMapping("/variants/{variantId}/stock")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     public ResponseEntity<ApiResponse<VariantResponse>> updateVariantStock(
             @PathVariable Long variantId,
-            @RequestParam Long shopId,
+            @AuthenticationPrincipal UserDetails userDetails,
             @Valid @RequestBody UpdateVariantStockRequest request) {
+        Long shopId = getShopIdFromUser(userDetails);
         VariantResponse response = productService.updateVariantStock(variantId, request.getStock(), shopId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/low-stock")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<LowStockVariantResponse>>> getLowStockVariants(
-            @RequestParam Long shopId) {
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long shopId = getShopIdFromUser(userDetails);
         List<LowStockVariantResponse> response = productService.getLowStockVariants(shopId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
