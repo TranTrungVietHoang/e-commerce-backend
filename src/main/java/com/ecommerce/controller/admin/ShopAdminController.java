@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/shops")
+@RequestMapping("/api/v1/admin/shops")
 @RequiredArgsConstructor
 public class ShopAdminController {
 
@@ -29,7 +29,7 @@ public class ShopAdminController {
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<Void> approveShop(@PathVariable Long id, @Valid @RequestBody ShopApprovalRequest request) {
-        shopService.approveShop(id, request.getStatus());
+        shopService.approveShop(id, request.getStatus(), request.getReason());
         return ApiResponse.success(null, "Cập nhật trạng thái duyệt cửa hàng thành công");
     }
     
@@ -38,5 +38,12 @@ public class ShopAdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<List<ShopResponse>> getAllShops() {
         return ApiResponse.success(shopService.getAllShops());
+    }
+
+    // Lấy thông tin chi tiết một Shop
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ApiResponse<ShopResponse> getShopById(@PathVariable Long id) {
+        return ApiResponse.success(shopService.getShopById(id));
     }
 }

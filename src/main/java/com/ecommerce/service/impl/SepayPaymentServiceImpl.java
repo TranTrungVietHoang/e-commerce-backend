@@ -4,6 +4,7 @@ import com.ecommerce.config.SepayConfig;
 import com.ecommerce.dto.request.payment.CreatePaymentQrRequest;
 import com.ecommerce.dto.response.payment.PaymentQrResponse;
 import com.ecommerce.entity.Order;
+import com.ecommerce.enums.OrderStatus;
 import com.ecommerce.exception.ResourceNotFoundException;
 import com.ecommerce.repository.OrderRepository;
 import com.ecommerce.service.PaymentService;
@@ -33,9 +34,6 @@ public class SepayPaymentServiceImpl implements PaymentService {
 
     /**
      * Tạo QR code thanh toán Sepay
-     * - Gọi Sepay API để sinh QR
-     * - Lưu transaction ID vào database
-     * - Trả về QR response cho frontend
      */
     @Override
     @Transactional
@@ -73,10 +71,11 @@ public class SepayPaymentServiceImpl implements PaymentService {
             Long orderId = Long.parseLong(transactionId);
             Order order = orderRepository.findById(orderId).orElse(null);
             
-            if (order != null && "PENDING".equals(order.getStatus())) {
-                order.setStatus("PAID"); // HOẶC COMPLETED Tùy hệ thống
+            if (order != null && order.getStatus() == OrderStatus.PENDING) {
+                // Đánh dấu là đã thanh toán bằng cách chuyển sang CONFIRMED (hoặc trạng thái bạn quy định)
+                order.setStatus(OrderStatus.CONFIRMED);
                 orderRepository.save(order);
-                log.info("Thành công: Đã cập nhật trạng thái Order {} thành PAID", orderId);
+                log.info("Thành công: Đã cập nhật trạng thái Order {} thành CONFIRMED (PAID)", orderId);
             } else {
                 log.warn("Bỏ qua Webhook: Order {} không tồn tại hoặc đã được xử lý", orderId);
             }
@@ -97,28 +96,25 @@ public class SepayPaymentServiceImpl implements PaymentService {
         return PaymentQrResponse.builder()
                 .orderId(orderId)
                 .status(order.getStatus())
+                .amount(order.getTotalAmount())
                 .build();
     }
 
     /**
-     * Call Sepay API (Mock implementation)
-     * Trong production, bạn cần:
-     * 1. Call https://my.sepay.vn/api/v2/generateqr
-     * 2. Verify API response signature
-     * 3. Lưu transaction reference vào DB
+     * Call Sepay API (Mock logic combined with real template)
      */
     private PaymentQrResponse callSepayAPI(CreatePaymentQrRequest request, String transferContent) {
         Map<String, Object> sepayRequest = new HashMap<>();
-        sepayRequest.put("bank_account_number", request.getAccountNo() != null ? request.getAccountNo() : "0334088130");
-        sepayRequest.put("bank_account_name", request.getAccountName() != null ? request.getAccountName() : "VO MINH TAM");
+        sepayRequest.put("bank_account_number", request.getAccountNo() != null ? request.getAccountNo() : sepayConfig.getAccountNumber());
+        sepayRequest.put("bank_account_name", request.getAccountName() != null ? request.getAccountName() : sepayConfig.getAccountName());
         sepayRequest.put("amount", request.getAmount().intValue());
-        sepayRequest.put("description", transferContent);
+        sepayRequest.put("description", request.getDescription() != null ? request.getDescription() : transferContent);
         sepayRequest.put("reference_code", "ORDER-" + request.getOrderId());
         
         log.debug("Sepay API Request: {}", sepayRequest);
         
         try {
-            // Gọi Sepay API thực tế
+            // Gọi Sepay API thực tế (nếu apiUrl cấu hình đúng)
             Map response = restTemplate.postForObject(
                 sepayConfig.getApiUrl() + "/generateqr",
                 sepayRequest,
@@ -135,18 +131,18 @@ public class SepayPaymentServiceImpl implements PaymentService {
                         .transferContent(transferContent)
                         .qrCodeBase64((String) qrData.get("qr_code"))
                         .expiresAt(Instant.now().plusSeconds(900).toEpochMilli()) // 15 phút
-                        .status("PENDING")
+                        .status(OrderStatus.PENDING)
                         .build();
             }
         } catch (Exception e) {
-            log.error("Lỗi gọi Sepay API: {}", e.getMessage(), e);
+            log.error("Lỗi gọi Sepay API: {}", e.getMessage());
         }
         
         // Fallback: Tạo URL VietQR ảnh thông qua Sepay (Free tier standard)
         String template = "https://qr.sepay.vn/img?bank=%s&acc=%s&amount=%d&des=%s";
         String qrUrl = String.format(template, 
                 request.getBankCode() != null ? request.getBankCode() : "MB",
-                request.getAccountNo() != null ? request.getAccountNo() : "0334088130",
+                request.getAccountNo() != null ? request.getAccountNo() : sepayConfig.getAccountNumber(),
                 request.getAmount().intValue(),
                 transferContent);
         
@@ -156,7 +152,7 @@ public class SepayPaymentServiceImpl implements PaymentService {
                 .transferContent(transferContent)
                 .qrCode(qrUrl)
                 .expiresAt(Instant.now().plusSeconds(900).toEpochMilli()) // 15 phút
-                .status("PENDING")
+                .status(OrderStatus.PENDING)
                 .build();
     }
 }

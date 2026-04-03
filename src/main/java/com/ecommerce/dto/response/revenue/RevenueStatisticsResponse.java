@@ -1,7 +1,6 @@
 package com.ecommerce.dto.response.revenue;
 
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -9,6 +8,8 @@ import java.util.List;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class RevenueStatisticsResponse implements Serializable {
     private Long totalOrders;
     private Long deliveredOrders;
@@ -18,8 +19,10 @@ public class RevenueStatisticsResponse implements Serializable {
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class DailyRevenueData implements Serializable {
-        private String date; // Format: YYYY-MM-DD hoặc MM-YYYY
+        private String date; // Format: dd-MM-yyyy, MM-yyyy, hoặc yyyy
         private Long orderCount;
         private BigDecimal revenue;
     }

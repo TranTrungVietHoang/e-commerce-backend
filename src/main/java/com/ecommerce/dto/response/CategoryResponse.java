@@ -1,10 +1,14 @@
 package com.ecommerce.dto.response;
 
-import lombok.Data;
+import lombok.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class CategoryResponse {
     private Long id;
     private String name;

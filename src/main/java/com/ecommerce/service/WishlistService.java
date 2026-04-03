@@ -24,6 +24,7 @@ public class WishlistService {
     private final UserRepository userRepository;
 
     @Transactional
+    @SuppressWarnings("null")
     public WishlistResponse addToWishlist(Long userId, Long productId) {
         if (wishlistRepository.existsByUserIdAndProductId(userId, productId)) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Sản phẩm đã có trong danh sách yêu thích");
@@ -45,6 +46,7 @@ public class WishlistService {
     }
 
     @Transactional
+    @SuppressWarnings("null")
     public void removeFromWishlist(Long userId, Long productId) {
         Wishlist wishlist = wishlistRepository.findByUserIdAndProductId(userId, productId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND, "Không tìm thấy sản phẩm trong danh sách yêu thích"));
@@ -53,6 +55,7 @@ public class WishlistService {
     }
 
     @Transactional(readOnly = true)
+    @SuppressWarnings("null")
     public Page<WishlistResponse> getUserWishlist(Long userId, Pageable pageable) {
         return wishlistRepository.findByUserId(userId, pageable)
                 .map(this::mapToResponse);

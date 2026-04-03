@@ -5,6 +5,8 @@ import com.ecommerce.dto.request.shop.ShopUpdateRequest;
 import com.ecommerce.dto.response.ApiResponse;
 import com.ecommerce.dto.response.shop.ShopResponse;
 import com.ecommerce.entity.User;
+import com.ecommerce.exception.AppException;
+import com.ecommerce.exception.ErrorCode;
 import com.ecommerce.service.ShopService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/seller/shops")
+@RequestMapping("/api/v1/seller/shops")
 @RequiredArgsConstructor
 public class ShopSellerController {
 
@@ -25,6 +27,10 @@ public class ShopSellerController {
     public ApiResponse<ShopResponse> registerShop(
             @AuthenticationPrincipal User user, // Giả sử UserDetails implementation là User entity
             @Valid @RequestBody ShopRegistrationRequest request) {
+        
+        if (user == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
 
         // sellerId lấy trực tiếp từ token để đảm bảo tính xác thực
         return ApiResponse.created(shopService.createShop(user.getId(), request));

@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 public class ProductServiceImpl implements ProductService {
 
     private static final Pattern DIACRITICS_PATTERN = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-    private static final Set<String> ALLOWED_STATUSES = Set.of("ACTIVE", "INACTIVE", "DELETED");
+    private static final Set<String> ALLOWED_STATUSES = Set.of("ACTIVE", "INACTIVE", "DELETED", "PENDING", "REJECTED");
     private static final int LOW_STOCK_THRESHOLD = 10;
 
     private final ProductRepository productRepository;
@@ -66,7 +66,8 @@ public class ProductServiceImpl implements ProductService {
         product.setName(req.getName());
         product.setDescription(req.getDescription());
         product.setBasePrice(req.getBasePrice());
-        product.setStatus(normalizeStatus(req.getStatus(), "ACTIVE"));
+        // Khi tạo mới từ Seller, mặc định luôn là PENDING để Admin duyệt
+        product.setStatus("PENDING");
         applyFlashSale(product, req.getFlashSaleEnabled(), req.getFlashSalePrice(), req.getFlashSaleStartAt(), req.getFlashSaleEndAt());
 
         product.setSlug(generateTemporarySlug(req.getName()));
@@ -140,6 +141,10 @@ public class ProductServiceImpl implements ProductService {
 
         if (req.getStatus() != null) {
             product.setStatus(normalizeStatus(req.getStatus(), product.getStatus()));
+        } else {
+            // Mọi chỉnh sửa từ phía Seller (nếu không truyền Status cụ thể) 
+            // đều đưa sản phẩm về trạng thái chờ duyệt lại để đảm bảo an toàn.
+            product.setStatus("PENDING");
         }
 
         if (req.getFlashSaleEnabled() != null
@@ -298,6 +303,7 @@ public class ProductServiceImpl implements ProductService {
         response.setFlashSalePrice(product.getFlashSalePrice());
         response.setFlashSaleStartAt(product.getFlashSaleStartAt());
         response.setFlashSaleEndAt(product.getFlashSaleEndAt());
+        response.setStatusReason(product.getStatusReason());
         return response;
     }
 
@@ -320,6 +326,7 @@ public class ProductServiceImpl implements ProductService {
         response.setFlashSalePrice(base.getFlashSalePrice());
         response.setFlashSaleStartAt(base.getFlashSaleStartAt());
         response.setFlashSaleEndAt(base.getFlashSaleEndAt());
+        response.setStatusReason(base.getStatusReason());
 
         response.setCategoryId(product.getCategory() != null ? product.getCategory().getId() : null);
         response.setDescription(product.getDescription());
@@ -410,6 +417,52 @@ public class ProductServiceImpl implements ProductService {
                 .map(ProductImage::getImageUrl)
                 .findFirst()
                 .orElse(product.getImages().isEmpty() ? null : product.getImages().get(0).getImageUrl());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getAllProducts(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return productRepository.findAll(pageable)
+                .map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional
+    public ProductDetailResponse updateProductStatus(Long id, String status, String reason) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        
+        product.setStatus(normalizeStatus(status, product.getStatus()));
+        product.setStatusReason(reason); // Admin gán lý do khi thay đổi trạng thái
+        product = productRepository.save(product);
+        return mapToDetailResponse(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductDetailResponse updateProductStatusForSeller(Long id, String status, Long shopId) {
+        Product product = productRepository.findByIdAndShopId(id, shopId)
+                .orElseThrow(() -> new BusinessException("Khong tim thay san pham hoac ban khong co quyen"));
+
+        String normalized = normalizeStatus(status, product.getStatus());
+        
+        // Seller chỉ được phép chuyển giữa ACTIVE và INACTIVE
+        if (!"ACTIVE".equals(normalized) && !"INACTIVE".equals(normalized)) {
+            throw new BusinessException("Nguoi ban chi co the An hoac Hien san pham");
+        }
+
+        // Nếu muốn Hiện (ACTIVE), phải đảm bảo sản phẩm không bị REJECTED bởi admin
+        if ("ACTIVE".equals(normalized) && "REJECTED".equals(product.getStatus())) {
+            throw new BusinessException("San pham bi tu choi boi Admin, vui long chinh sua va gui duyet lai");
+        }
+
+        product.setStatus(normalized);
+        // Khi seller tự ẩn/hiện, xóa lý do cũ của admin (nếu có)
+        product.setStatusReason(null); 
+        
+        product = productRepository.save(product);
+        return mapToDetailResponse(product);
     }
 
     private String generateTemporarySlug(String input) {

@@ -12,19 +12,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * Ánh xạ bảng "users" trong DB.
- *
- * TRIỂN KHAI UserDetails của Spring Security:
- *   → Spring Security dùng interface này để lấy thông tin user khi authenticate.
- *   → getAuthorities(): convert Set<Role> → Set<GrantedAuthority> để Security biết quyền.
- *   → isAccountNonLocked(): kiểm tra status == ACTIVE.
- *
- * LƯU Ý QUAN TRỌNG:
- *   - Tên cột "password_hash" trong DB ánh xạ vào field "password" (UserDetails).
- *   - KHÔNG map field "passwordHash" vì sẽ conflict với getPassword() của UserDetails.
- *   - fetch = EAGER cho roles: cần load roles ngay để Security kiểm tra quyền.
- */
 @Entity
 @Table(name = "users")
 @Getter
@@ -41,7 +28,6 @@ public class User implements UserDetails {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    // Tên cột DB là "password_hash", nhưng field Java là "password"
     @Column(name = "password_hash", nullable = false, length = 255)
     private String password;
 
@@ -54,10 +40,6 @@ public class User implements UserDetails {
     @Column(name = "avatar_url")
     private String avatarUrl;
 
-    /**
-     * Trạng thái tài khoản: ACTIVE / LOCKED
-     * LOCKED → isAccountNonLocked() = false → Spring Security chặn login tự động.
-     */
     @Column(nullable = false, length = 20)
     @Builder.Default
     private String status = "ACTIVE";
@@ -66,12 +48,6 @@ public class User implements UserDetails {
     @JoinColumn(name = "membership_level_id")
     private MembershipLevel membershipLevel;
 
-    /**
-     * EAGER fetch: phải load roles ngay khi load User
-     * vì Spring Security cần roles để kiểm tra quyền trong filter.
-     *
-     * Bảng join: user_roles (user_id, role_id)
-     */
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "user_roles",
@@ -99,13 +75,77 @@ public class User implements UserDetails {
     }
 
     // =========================================================
+    // Manual Getters/Setters as a fallback for Lombok issues
+    // =========================================================
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public Set<Role> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+
+    // =========================================================
     // UserDetails Implementation (Spring Security)
     // =========================================================
 
-    /**
-     * Convert Set<Role> → Collection<GrantedAuthority>.
-     * Ví dụ: Role "ROLE_ADMIN" → SimpleGrantedAuthority("ROLE_ADMIN").
-     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
@@ -115,7 +155,6 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        // Spring Security dùng email làm username
         return email;
     }
 
@@ -124,11 +163,6 @@ public class User implements UserDetails {
         return true;
     }
 
-    /**
-     * Kiểm tra tài khoản có bị khóa không.
-     * Khi Admin lock user → status = "LOCKED" → return false
-     * → Spring Security tự động từ chối đăng nhập với lỗi LockedException.
-     */
     @Override
     public boolean isAccountNonLocked() {
         return "ACTIVE".equals(status);

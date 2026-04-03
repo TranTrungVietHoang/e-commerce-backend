@@ -1,5 +1,8 @@
 package com.ecommerce.controller;
 
+import com.ecommerce.enums.OrderStatus;
+import com.ecommerce.enums.PaymentMethod;
+import com.ecommerce.repository.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -14,13 +17,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class HelloController {
 
-    private final com.ecommerce.repository.CategoryRepository categoryRepository;
-    private final com.ecommerce.repository.ShopRepository shopRepository;
-    private final com.ecommerce.repository.UserRepository userRepository;
-    private final com.ecommerce.repository.OrderRepository orderRepository;
-    private final com.ecommerce.repository.OrderItemRepository orderItemRepository;
-    private final com.ecommerce.repository.ProductRepository productRepository;
-    private final com.ecommerce.repository.ProductImageRepository productImageRepository;
+    private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
+    private final ShopRepository shopRepository;
+    private final ProductRepository productRepository;
+    private final ProductImageRepository productImageRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     @GetMapping("/")
     public Map<String, Object> welcome() {
@@ -53,13 +56,17 @@ public class HelloController {
 
             // 2. Lấy 1 tài khoản User bất kỳ ra để gán làm chủ Shop
             com.ecommerce.entity.User seller = userRepository.findAll().stream().findFirst().orElse(null);
-            if (seller != null && !shopRepository.existsById(1L)) {
-                com.ecommerce.entity.Shop shop = new com.ecommerce.entity.Shop();
-                shop.setSeller(seller);
-                shop.setName("Tech Store VN");
-                shop.setDescription("Cửa hàng chính hãng");
-                shop.setRating(new java.math.BigDecimal("5.0"));
-                shopRepository.save(shop);
+            com.ecommerce.entity.Shop shop = null;
+            if (seller != null) {
+                shop = shopRepository.findById(1L).orElse(null);
+                if (shop == null) {
+                    shop = new com.ecommerce.entity.Shop();
+                    shop.setSeller(seller);
+                    shop.setName("Tech Store VN");
+                    shop.setDescription("Cửa hàng chính hãng");
+                    shop.setRating(new java.math.BigDecimal("5.0"));
+                    shop = shopRepository.save(shop);
+                }
             }
 
             // Gắn ảnh mẫu cho sản phẩm đầu tiên nếu chưa có ảnh
@@ -74,15 +81,15 @@ public class HelloController {
             }
 
             // 3. Tạo 1 Đơn Hàng Ảo (Trạng thái DELIVERED) để test Review
-            if (seller != null && product != null && !orderRepository.existsById(1L)) {
+            if (seller != null && product != null && shop != null && !orderRepository.existsById(1L)) {
                 com.ecommerce.entity.Order order = new com.ecommerce.entity.Order();
                 order.setCustomer(seller);
-                order.setShop(shopRepository.findById(1L).orElse(null));
+                order.setShop(shop);
                 order.setSubtotal(product.getBasePrice());
                 order.setTotalAmount(product.getBasePrice());
-                order.setStatus("DELIVERED"); // Bắt buộc là DELIVERED mới được review!
+                order.setStatus(OrderStatus.DELIVERED); // Dùng Enum chuẩn
                 order.setShippingAddress("Hà Nội");
-                order.setPaymentMethod("COD");
+                order.setPaymentMethod(PaymentMethod.COD); // Dùng Enum chuẩn
                 order = orderRepository.save(order);
 
                 com.ecommerce.entity.OrderItem item = new com.ecommerce.entity.OrderItem();

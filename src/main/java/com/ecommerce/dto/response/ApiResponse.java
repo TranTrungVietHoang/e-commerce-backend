@@ -55,8 +55,8 @@ public class ApiResponse<T> {
     }
 
     /** Response lỗi với code và message tùy chỉnh */
-    public static ApiResponse<Void> error(int code, String msg) {
-        return ApiResponse.<Void>builder()
+    public static <T> ApiResponse<T> error(int code, String msg) {
+        return ApiResponse.<T>builder()
                 .code(code)
                 .message(msg)
                 .result(null)

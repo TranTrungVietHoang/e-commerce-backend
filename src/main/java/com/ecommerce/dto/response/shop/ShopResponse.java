@@ -15,6 +15,7 @@ public class ShopResponse {
     private String logoUrl;
     private String bannerUrl;
     private ShopStatus status;
+    private String rejectionReason;
     private BigDecimal rating;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

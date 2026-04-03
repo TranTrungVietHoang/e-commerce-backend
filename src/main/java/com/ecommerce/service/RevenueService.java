@@ -1,6 +1,9 @@
 package com.ecommerce.service;
 
 import com.ecommerce.dto.response.revenue.RevenueStatisticsResponse;
+import com.ecommerce.dto.response.revenue.TopProductResponse;
+
+import java.util.List;
 
 public interface RevenueService {
 
@@ -18,14 +21,14 @@ public interface RevenueService {
     RevenueStatisticsResponse getPlatformRevenue(String period);
 
     /**
-     * Lấy top 10 sản phẩm bán chạy nhất
+     * Lấy top sản phẩm bán chạy của shop
      */
-    java.util.List<com.ecommerce.dto.response.revenue.TopProductResponse> getTopProducts(Long shopId, int limit);
+    List<TopProductResponse> getTopProducts(Long shopId, int limit);
 
     /**
-     * Lấy top sản phẩm bán chạy nhất toàn sàn (Admin only)
+     * Lấy top sản phẩm bán chạy toàn sàn (Admin only)
      */
-    java.util.List<com.ecommerce.dto.response.revenue.TopProductResponse> getPlatformTopProducts(int limit);
+    List<TopProductResponse> getPlatformTopProducts(int limit);
 
     /**
      * Lấy thống kê doanh thu hôm nay

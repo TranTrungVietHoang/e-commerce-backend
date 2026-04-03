@@ -6,6 +6,7 @@ import com.ecommerce.entity.Order;
 import com.ecommerce.entity.OrderItem;
 import com.ecommerce.entity.Review;
 import com.ecommerce.entity.User;
+import com.ecommerce.enums.OrderStatus;
 import com.ecommerce.exception.AppException;
 import com.ecommerce.exception.ErrorCode;
 import com.ecommerce.repository.OrderItemRepository;
@@ -35,7 +36,7 @@ public class ReviewService {
             throw new AppException(ErrorCode.FORBIDDEN, "Bạn không có quyền đánh giá sản phẩm này");
         }
 
-        if (!"DELIVERED".equalsIgnoreCase(order.getStatus())) {
+        if (order.getStatus() != OrderStatus.DELIVERED) {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Chỉ được đánh giá khi đơn hàng đã giao thành công");
         }
 

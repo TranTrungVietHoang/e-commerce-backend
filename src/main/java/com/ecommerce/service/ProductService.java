@@ -19,4 +19,9 @@ public interface ProductService {
     void softDeleteProduct(Long id, Long shopId);
     VariantResponse updateVariantStock(Long variantId, int newStock, Long shopId);
     List<LowStockVariantResponse> getLowStockVariants(Long shopId);
+    
+    // Quản lý trạng thái (Ẩn/Hiện/Duyệt)
+    Page<ProductResponse> getAllProducts(int page, int size);
+    ProductDetailResponse updateProductStatus(Long id, String status, String reason);
+    ProductDetailResponse updateProductStatusForSeller(Long id, String status, Long shopId);
 }

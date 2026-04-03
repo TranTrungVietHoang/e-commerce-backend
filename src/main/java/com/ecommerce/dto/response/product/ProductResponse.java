@@ -22,4 +22,5 @@ public class ProductResponse {
     private BigDecimal flashSalePrice;
     private LocalDateTime flashSaleStartAt;
     private LocalDateTime flashSaleEndAt;
+    private String statusReason;
 }
