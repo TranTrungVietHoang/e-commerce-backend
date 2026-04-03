@@ -39,6 +39,10 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS, "Email đã được sử dụng");
         }
 
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            throw new AppException(ErrorCode.USER_ALREADY_EXISTS, "Số điện thoại đã được sử dụng bởi tài khoản khác");
+        }
+
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -76,9 +80,18 @@ public class AuthServiceImpl implements AuthService {
         String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = jwtUtil.generateRefreshToken(user.getEmail());
 
+        // DEBUG: In token ra console để người dùng lấy khi bị Edge chặn storage
+        System.out.println("\n--- DEBUG TOKEN FOR USER: " + user.getEmail() + " ---");
+        System.out.println("ACCESS_TOKEN: " + accessToken);
+        System.out.println("----------------------------------------------\n");
+
         return AuthResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .userId(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .roles(user.getRoles().stream().map(Role::getName).toList())
                 .message("Đăng nhập thành công")
                 .build();
     }

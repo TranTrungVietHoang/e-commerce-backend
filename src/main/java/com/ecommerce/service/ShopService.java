@@ -23,5 +23,5 @@ public interface ShopService {
 
     PageResponse<ShopResponse> getShops(Pageable pageable);
 
-    void approveShop(Long shopId, ShopStatus status);
+    void approveShop(Long shopId, ShopStatus status, String reason);
 }
