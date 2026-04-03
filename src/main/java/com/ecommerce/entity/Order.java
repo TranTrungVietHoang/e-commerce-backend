@@ -28,6 +28,10 @@ public class Order {
     @JoinColumn(name = "shop_id", nullable = false)
     private Shop shop;
 
+    // Explicit setters to bypass IDE Lombok cache issues
+    public void setCustomer(User customer) { this.customer = customer; }
+    public void setShop(Shop shop) { this.shop = shop; }
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voucher_id")
     private Voucher voucher;

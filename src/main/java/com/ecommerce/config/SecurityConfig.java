@@ -55,6 +55,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/search/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/v1/test/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/ws-native/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reviews/product/**").permitAll()
 
                         // ADMIN ONLY
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

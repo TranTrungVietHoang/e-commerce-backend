@@ -4,29 +4,31 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "notifications")
+@Table(name = "chat_messages")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Notification {
+public class ChatMessage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @JoinColumn(name = "sender_id", nullable = false)
+    private User sender;
 
-    @Column(nullable = false, columnDefinition = "NVARCHAR(255)")
-    private String title;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "receiver_id", nullable = false)
+    private User receiver;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_id")
+    private Shop shop;
 
     @Column(nullable = false, columnDefinition = "NVARCHAR(MAX)")
     private String message;
-
-    @Column(nullable = false, length = 50)
-    private String type; // VD: SYSTEM, ORDER, PROMOTION
 
     @Column(name = "is_read")
     @Builder.Default
