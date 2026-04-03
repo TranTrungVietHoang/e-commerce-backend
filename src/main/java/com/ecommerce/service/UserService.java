@@ -24,6 +24,13 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final CloudinaryService cloudinaryService;
 
+    /**
+     * Lấy userId từ username (email) - dùng trong Controller sau khi xác thực JWT.
+     */
+    public Long getUserIdByUsername(String email) {
+        return getUserByEmail(email).getId();
+    }
+
     public UserResponse getProfile(String email) {
         User user = getUserByEmail(email);
         return mapToResponse(user);
