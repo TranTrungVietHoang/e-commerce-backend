@@ -2,9 +2,11 @@ package com.ecommerce.controller;
 
 import com.ecommerce.enums.OrderStatus;
 import com.ecommerce.enums.PaymentMethod;
+import com.ecommerce.repository.*;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -12,32 +14,16 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/test")
+@RequiredArgsConstructor
 public class HelloController {
 
-    private final com.ecommerce.repository.CategoryRepository categoryRepository;
-    private final com.ecommerce.repository.UserRepository userRepository;
-    private final com.ecommerce.repository.ShopRepository shopRepository;
-    private final com.ecommerce.repository.ProductRepository productRepository;
-    private final com.ecommerce.repository.ProductImageRepository productImageRepository;
-    private final com.ecommerce.repository.OrderRepository orderRepository;
-    private final com.ecommerce.repository.OrderItemRepository orderItemRepository;
-
-    public HelloController(
-            com.ecommerce.repository.CategoryRepository categoryRepository,
-            com.ecommerce.repository.UserRepository userRepository,
-            com.ecommerce.repository.ShopRepository shopRepository,
-            com.ecommerce.repository.ProductRepository productRepository,
-            com.ecommerce.repository.ProductImageRepository productImageRepository,
-            com.ecommerce.repository.OrderRepository orderRepository,
-            com.ecommerce.repository.OrderItemRepository orderItemRepository) {
-        this.categoryRepository = categoryRepository;
-        this.userRepository = userRepository;
-        this.shopRepository = shopRepository;
-        this.productRepository = productRepository;
-        this.productImageRepository = productImageRepository;
-        this.orderRepository = orderRepository;
-        this.orderItemRepository = orderItemRepository;
-    }
+    private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
+    private final ShopRepository shopRepository;
+    private final ProductRepository productRepository;
+    private final ProductImageRepository productImageRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
 
     @GetMapping("/")
     public Map<String, Object> welcome() {
@@ -101,9 +87,9 @@ public class HelloController {
                 order.setShop(shop);
                 order.setSubtotal(product.getBasePrice());
                 order.setTotalAmount(product.getBasePrice());
-                order.setStatus(OrderStatus.DELIVERED); // Bắt buộc là DELIVERED mới được review!
+                order.setStatus(OrderStatus.DELIVERED); // Dùng Enum chuẩn
                 order.setShippingAddress("Hà Nội");
-                order.setPaymentMethod(PaymentMethod.COD);
+                order.setPaymentMethod(PaymentMethod.COD); // Dùng Enum chuẩn
                 order = orderRepository.save(order);
 
                 com.ecommerce.entity.OrderItem item = new com.ecommerce.entity.OrderItem();

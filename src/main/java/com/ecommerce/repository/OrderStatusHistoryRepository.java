@@ -9,7 +9,5 @@ import java.util.List;
 @Repository
 public interface OrderStatusHistoryRepository extends JpaRepository<OrderStatusHistory, Long> {
 
-    // Lấy toàn bộ lịch sử trạng thái theo đơn hàng, sắp xếp theo thời gian mới nhất trước
-    List<OrderStatusHistory> findByOrderIdOrderByChangedAtAsc(Long orderId);
+    List<OrderStatusHistory> findByOrderIdOrderByChangedAtDesc(Long orderId);
 }
-

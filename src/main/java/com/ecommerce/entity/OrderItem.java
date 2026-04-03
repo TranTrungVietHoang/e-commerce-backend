@@ -49,4 +49,3 @@ public class OrderItem {
     @Column(name = "line_total", nullable = false, precision = 18, scale = 2)
     private BigDecimal lineTotal;
 }
-

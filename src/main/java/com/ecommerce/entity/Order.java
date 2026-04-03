@@ -13,11 +13,11 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@EqualsAndHashCode(exclude = {"customer", "shop", "items"})
-@ToString(exclude = {"customer", "shop", "items"})
+@EqualsAndHashCode(exclude = {"customer", "shop", "voucher", "items", "statusHistories"})
+@ToString(exclude = {"customer", "shop", "voucher", "items", "statusHistories"})
 public class Order {
 
     @Id
@@ -32,6 +32,13 @@ public class Order {
     @JoinColumn(name = "shop_id", nullable = false)
     private Shop shop;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voucher_id")
+    private Voucher voucher;
+
+    @Column(name = "voucher_code", length = 50)
+    private String voucherCode;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
@@ -41,10 +48,12 @@ public class Order {
     private String shippingAddress;
 
     @Column(name = "recipient_name", nullable = false, length = 100)
-    private String recipientName;
+    @Builder.Default
+    private String recipientName = "Chưa xác định";
 
     @Column(name = "recipient_phone", nullable = false, length = 20)
-    private String recipientPhone;
+    @Builder.Default
+    private String recipientPhone = "0000000000";
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 30)
@@ -67,8 +76,9 @@ public class Order {
     @Builder.Default
     private BigDecimal totalAmount = BigDecimal.ZERO;
 
-    @Column(name = "voucher_code", length = 50)
-    private String voucherCode;
+    @Column(name = "points_used")
+    @Builder.Default
+    private Integer pointsUsed = 0;
 
     @Column(name = "note", columnDefinition = "NVARCHAR(MAX)")
     private String note;
@@ -83,10 +93,17 @@ public class Order {
     @Builder.Default
     private List<OrderItem> items = new ArrayList<>();
 
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private List<OrderStatusHistory> statusHistories = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (status == null) {
+            status = OrderStatus.PENDING;
+        }
     }
 
     @PreUpdate
@@ -94,4 +111,3 @@ public class Order {
         updatedAt = LocalDateTime.now();
     }
 }
-

@@ -15,4 +15,5 @@ public class UserResponse {
     private String status;
     private String avatarUrl;
     private List<String> roles;
+    private Long shopId;  // Seller's shop ID (null if not a seller)
 }

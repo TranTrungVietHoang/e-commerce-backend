@@ -2,15 +2,20 @@ package com.ecommerce.dto.response.order;
 
 import com.ecommerce.enums.OrderStatus;
 import com.ecommerce.enums.PaymentMethod;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class OrderDetailResponse {
-
     private Long id;
 
     // Thông tin khách hàng
@@ -37,6 +42,7 @@ public class OrderDetailResponse {
     private BigDecimal discountAmount;
     private BigDecimal shippingFee;
     private BigDecimal totalAmount;
+    private Integer pointsUsed;
 
     private String voucherCode;
     private String note;
@@ -48,4 +54,3 @@ public class OrderDetailResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
-

@@ -1,4 +1,16 @@
 package com.ecommerce.repository;
 
-public interface MembershipLevelRepository {
+import com.ecommerce.entity.MembershipLevel;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface MembershipLevelRepository extends JpaRepository<MembershipLevel, Long> {
+
+    List<MembershipLevel> findAllByOrderByMinPointsAsc();
+
+    Optional<MembershipLevel> findFirstByMinPointsLessThanEqualOrderByMinPointsDesc(Integer minPoints);
 }

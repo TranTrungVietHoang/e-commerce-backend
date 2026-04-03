@@ -11,6 +11,7 @@ import com.ecommerce.dto.response.product.VariantResponse;
 import com.ecommerce.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +22,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/products")
+@Slf4j
 @RequiredArgsConstructor
 public class ProductController {
 
@@ -56,7 +58,10 @@ public class ProductController {
 
     @GetMapping("/public")
     public ResponseEntity<ApiResponse<List<ProductResponse>>> getPublicProducts() {
-        return ResponseEntity.ok(ApiResponse.success(productService.getPublicProducts()));
+        log.info("🔍 GET /api/v1/products/public - Fetching public products");
+        List<ProductResponse> products = productService.getPublicProducts();
+        log.info("✅ Found {} public products", products.size());
+        return ResponseEntity.ok(ApiResponse.success(products));
     }
 
     @GetMapping("/{id}")

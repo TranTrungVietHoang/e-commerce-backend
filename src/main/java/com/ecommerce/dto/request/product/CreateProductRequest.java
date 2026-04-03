@@ -35,6 +35,10 @@ public class CreateProductRequest {
     @NotEmpty(message = "Moi san pham can it nhat 1 hinh anh")
     private List<String> imageUrls;
 
+    @NotNull(message = "Vui long nhap so luong ton kho")
+    @DecimalMin(value = "0", inclusive = true, message = "So luong ton kho khong duoc am")
+    private Long stockQuantity;
+
     @Valid
     private List<CreateVariantRequest> variants;
 

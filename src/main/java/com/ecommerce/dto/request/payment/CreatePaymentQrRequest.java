@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 
+/**
+ * Request để tạo QR code thanh toán Sepay
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -14,7 +17,8 @@ import java.math.BigDecimal;
 public class CreatePaymentQrRequest {
     private Long orderId;
     private BigDecimal amount;
-    private String accountNo;
-    private String accountName;
-    private String bankCode;
+    private String description;
+    private String accountNo;      // Số tài khoản nhận
+    private String accountName;    // Tên chủ tài khoản
+    private String bankCode;       // Mã ngân hàng (VCB, TCB, etc)
 }

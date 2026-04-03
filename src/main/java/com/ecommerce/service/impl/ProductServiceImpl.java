@@ -168,6 +168,10 @@ public class ProductServiceImpl implements ProductService {
             upsertVariants(product, req.getVariants(), true);
         }
 
+        if (req.getStockQuantity() != null) {
+            product.setStockQuantity(req.getStockQuantity());
+        }
+
         product = productRepository.save(product);
         return mapToDetailResponse(product);
     }

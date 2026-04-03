@@ -46,4 +46,3 @@ public class OrderStatusHistory {
         changedAt = LocalDateTime.now();
     }
 }
-

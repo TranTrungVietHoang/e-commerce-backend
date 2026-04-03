@@ -18,6 +18,8 @@ public class AuthResponse {
     private Long userId;
     private String email;
     private String fullName;
+    private String avatarUrl;
     private List<String> roles;
-    private String message; // Thêm dòng này để hết lỗi .message()
+    private Long shopId;  // For sellers: their shop ID
+    private String message;
 }
