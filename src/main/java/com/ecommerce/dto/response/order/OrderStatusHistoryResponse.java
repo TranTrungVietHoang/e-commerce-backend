@@ -1,18 +1,26 @@
 package com.ecommerce.dto.response.order;
 
+import com.ecommerce.enums.OrderStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Data
 @Builder
-public class OrderStatusHistoryResponse implements Serializable {
+@NoArgsConstructor
+@AllArgsConstructor
+public class OrderStatusHistoryResponse {
     private Long id;
-    private String status;
+    private Long orderId;
+    private OrderStatus oldStatus;
+    private OrderStatus newStatus;
+    private Long changedBy;
+    private String note;
+    
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
     private LocalDateTime changedAt;
-    private String note;
 }

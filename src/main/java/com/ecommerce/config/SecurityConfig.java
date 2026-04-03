@@ -58,6 +58,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/ws-native/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/product/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/seller/shops/register").permitAll() // Thêm permitAll cho register shop
 
                         // ADMIN ONLY
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")

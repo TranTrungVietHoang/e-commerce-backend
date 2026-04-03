@@ -9,6 +9,8 @@ import com.ecommerce.entity.User;
 import com.ecommerce.enums.ShopStatus;
 import com.ecommerce.exception.AppException;
 import com.ecommerce.exception.ErrorCode;
+import com.ecommerce.entity.Role;
+import com.ecommerce.repository.RoleRepository;
 import com.ecommerce.repository.ShopRepository;
 import com.ecommerce.repository.UserRepository;
 import com.ecommerce.service.ShopService;
@@ -27,8 +29,10 @@ public class ShopServiceImpl implements ShopService {
 
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public ShopResponse getShopBySellerId(Long sellerId) {
         Shop shop = shopRepository.findBySellerId(sellerId)
                 .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
@@ -36,22 +40,25 @@ public class ShopServiceImpl implements ShopService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ShopResponse getShopById(Long id) {
-        Shop shop = shopRepository.findById(id)
+        Shop shop = shopRepository.findByIdWithSeller(id)
                 .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
         return mapToResponse(shop);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ShopResponse> getAllShops() {
-        return shopRepository.findAll().stream()
+        return shopRepository.findAllWithSeller().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ShopResponse> getPendingShops() {
-        return shopRepository.findByStatus(ShopStatus.PENDING).stream()
+        return shopRepository.findByStatusWithSeller(ShopStatus.PENDING).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -62,10 +69,34 @@ public class ShopServiceImpl implements ShopService {
         User seller = userRepository.findById(sellerId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        if (shopRepository.existsBySellerId(sellerId)) {
-            throw new AppException(ErrorCode.SHOP_ALREADY_EXISTS);
+        // 1. Chặn Admin tạo Shop
+        boolean isAdmin = seller.getRoles().stream()
+                .anyMatch(role -> role.getName().equals("ROLE_ADMIN"));
+        if (isAdmin) {
+            throw new AppException(ErrorCode.UNAUTHORIZED, "Quản trị viên không được phép tạo gian hàng cá nhân");
         }
 
+        // 2. Kiểm tra Shop đã tồn tại chưa
+        java.util.Optional<Shop> existingShop = shopRepository.findBySellerId(sellerId);
+        
+        if (existingShop.isPresent()) {
+            Shop shop = existingShop.get();
+            // Nếu đã APPROVED hoặc đang PENDING thì không cho tạo thêm
+            if (shop.getStatus() == ShopStatus.APPROVED || shop.getStatus() == ShopStatus.PENDING) {
+                throw new AppException(ErrorCode.SHOP_ALREADY_EXISTS, "Bạn đã có gian hàng hoặc đang chờ duyệt");
+            }
+            // Nếu là REJECTED -> Cho phép cập nhật thông tin và gửi lại (PENDING)
+            shop.setName(request.getName());
+            shop.setDescription(request.getDescription());
+            shop.setLogoUrl(request.getLogoUrl());
+            shop.setBannerUrl(request.getBannerUrl());
+            shop.setStatus(ShopStatus.PENDING);
+            shop.setRejectionReason(null); // Xóa lý do cũ
+            shop = shopRepository.save(shop);
+            return mapToResponse(shop);
+        }
+
+        // 3. Kiểm tra tên shop mới (không tính shop hiện tại vì đã handled ở trên)
         if (shopRepository.existsByName(request.getName())) {
             throw new AppException(ErrorCode.SHOP_NAME_EXISTS);
         }
@@ -129,10 +160,23 @@ public class ShopServiceImpl implements ShopService {
 
     @Override
     @Transactional
-    public void approveShop(Long shopId, ShopStatus status) {
+    public void approveShop(Long shopId, ShopStatus status, String reason) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
         shop.setStatus(status);
+        shop.setRejectionReason(reason);
+        
+        // Nếu duyệt, gán thêm ROLE_SELLER cho người đăng ký
+        if (status == ShopStatus.APPROVED) {
+            Role sellerRole = roleRepository.findByName("ROLE_SELLER")
+                    .orElseThrow(() -> new RuntimeException("ROLE_SELLER không tồn tại"));
+            User seller = shop.getSeller();
+            if (!seller.getRoles().contains(sellerRole)) {
+                seller.getRoles().add(sellerRole);
+                userRepository.save(seller);
+            }
+        }
+        
         shopRepository.save(shop);
     }
 
@@ -146,6 +190,7 @@ public class ShopServiceImpl implements ShopService {
         response.setLogoUrl(shop.getLogoUrl());
         response.setBannerUrl(shop.getBannerUrl());
         response.setStatus(shop.getStatus());
+        response.setRejectionReason(shop.getRejectionReason());
         response.setRating(shop.getRating());
         response.setCreatedAt(shop.getCreatedAt());
         response.setUpdatedAt(shop.getUpdatedAt());

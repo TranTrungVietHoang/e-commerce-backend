@@ -1,9 +1,9 @@
 package com.ecommerce.entity;
 
+import com.ecommerce.enums.OrderStatus;
+import com.ecommerce.enums.PaymentMethod;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.ToString;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,9 +13,13 @@ import java.util.List;
 @Entity
 @Table(name = "orders")
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @EqualsAndHashCode(exclude = {"customer", "shop", "voucher", "items", "statusHistories"})
 @ToString(exclude = {"customer", "shop", "voucher", "items", "statusHistories"})
 public class Order {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -28,40 +32,56 @@ public class Order {
     @JoinColumn(name = "shop_id", nullable = false)
     private Shop shop;
 
-    // Explicit setters to bypass IDE Lombok cache issues
-    public void setCustomer(User customer) { this.customer = customer; }
-    public void setShop(Shop shop) { this.shop = shop; }
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voucher_id")
     private Voucher voucher;
 
-    @Column(nullable = false, precision = 18, scale = 2)
-    private BigDecimal subtotal;
+    @Column(name = "voucher_code", length = 50)
+    private String voucherCode;
 
-    @Column(name = "discount_amount", precision = 18, scale = 2)
-    private BigDecimal discountAmount = BigDecimal.ZERO;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private OrderStatus status = OrderStatus.PENDING;
 
-    @Column(name = "total_amount", nullable = false, precision = 18, scale = 2)
-    private BigDecimal totalAmount;
-
-    @Column(name = "points_used")
-    private Integer pointsUsed = 0;
-
-    @Column(nullable = false, length = 30)
-    private String status = "PENDING"; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
-
-    @Column(name = "shipping_address", columnDefinition = "NVARCHAR(MAX)", nullable = false)
+    @Column(name = "shipping_address", nullable = false, columnDefinition = "NVARCHAR(MAX)")
     private String shippingAddress;
 
-    @Column(name = "recipient_name", length = 100, nullable = false, columnDefinition = "NVARCHAR(100) DEFAULT 'Chưa xác định'")
+    @Column(name = "recipient_name", nullable = false, length = 100)
+    @Builder.Default
     private String recipientName = "Chưa xác định";
 
-    @Column(name = "recipient_phone", length = 20, nullable = false, columnDefinition = "VARCHAR(20) DEFAULT '0000000000'")
+    @Column(name = "recipient_phone", nullable = false, length = 20)
+    @Builder.Default
     private String recipientPhone = "0000000000";
 
-    @Column(name = "payment_method", nullable = false, length = 50)
-    private String paymentMethod; // COD, SEPAY_TRANSFER
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method", nullable = false, length = 30)
+    @Builder.Default
+    private PaymentMethod paymentMethod = PaymentMethod.COD;
+
+    @Column(name = "subtotal", nullable = false, precision = 18, scale = 2)
+    @Builder.Default
+    private BigDecimal subtotal = BigDecimal.ZERO;
+
+    @Column(name = "discount_amount", precision = 18, scale = 2)
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @Column(name = "shipping_fee", precision = 18, scale = 2)
+    @Builder.Default
+    private BigDecimal shippingFee = BigDecimal.ZERO;
+
+    @Column(name = "total_amount", nullable = false, precision = 18, scale = 2)
+    @Builder.Default
+    private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @Column(name = "points_used")
+    @Builder.Default
+    private Integer pointsUsed = 0;
+
+    @Column(name = "note", columnDefinition = "NVARCHAR(MAX)")
+    private String note;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -70,9 +90,11 @@ public class Order {
     private LocalDateTime updatedAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<OrderItem> items = new ArrayList<>();
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<OrderStatusHistory> statusHistories = new ArrayList<>();
 
     @PrePersist
@@ -80,7 +102,7 @@ public class Order {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if (status == null) {
-            status = "PENDING";
+            status = OrderStatus.PENDING;
         }
     }
 

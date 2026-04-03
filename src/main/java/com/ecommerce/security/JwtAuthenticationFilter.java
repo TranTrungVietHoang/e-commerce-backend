@@ -86,8 +86,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 }
             }
         } catch (Exception e) {
-            // Catch toàn bộ lỗi parsing JWT (Malformed, Expired, ...) để tránh sập server (500)
-            log.warn("JWT không hợp lệ hoặc sai định dạng: {}", e.getMessage());
+            // Khi JWT không hợp lệ (ví dụ bị "null", "undefined" do Edge chặn localStorage), 
+            // ta chỉ log debug để tránh gây cảnh báo nghiêm trọng cho các Public API.
+            log.debug("JWT skip: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);

@@ -60,7 +60,7 @@ public class GlobalExceptionHandler {
 
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .code(errorCode.getCode())
-                .message(errorCode.getMessage())
+                .message(ex.getMessage()) // Ưu tiên nội dung lỗi cụ thể được ném ra
                 .result(null)
                 .build();
 

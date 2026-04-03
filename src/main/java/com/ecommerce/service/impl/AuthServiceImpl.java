@@ -43,6 +43,10 @@ public class AuthServiceImpl implements AuthService {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS, "Email đã được sử dụng");
         }
 
+        if (request.getPhone() != null && userRepository.existsByPhone(request.getPhone())) {
+            throw new AppException(ErrorCode.USER_ALREADY_EXISTS, "Số điện thoại đã được sử dụng bởi tài khoản khác");
+        }
+
         User user = User.builder()
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
@@ -98,9 +102,7 @@ public class AuthServiceImpl implements AuthService {
         // If user is a seller, fetch their shop ID
         if (roleNames.contains("ROLE_SELLER")) {
             Optional<Shop> shop = shopRepository.findBySellerId(user.getId());
-            if (shop.isPresent()) {
-                builder.shopId(shop.get().getId());
-            }
+            shop.ifPresent(value -> builder.shopId(value.getId()));
         }
 
         return builder.build();
