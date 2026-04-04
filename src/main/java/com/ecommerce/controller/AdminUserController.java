@@ -1,5 +1,6 @@
 package com.ecommerce.controller;
 
+import com.ecommerce.annotation.Audit;
 import com.ecommerce.dto.response.ApiResponse;
 import com.ecommerce.dto.response.PageResponse;
 import com.ecommerce.dto.response.user.UserResponse;
@@ -34,6 +35,7 @@ public class AdminUserController {
     }
 
     @PutMapping("/{id}/status")
+    @Audit(action = "UPDATE_USER_STATUS")
     public ResponseEntity<ApiResponse<Void>> updateUserStatus(
             @PathVariable Long id, 
             @RequestParam String status) {

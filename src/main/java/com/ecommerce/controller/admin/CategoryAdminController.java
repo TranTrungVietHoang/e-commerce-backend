@@ -1,5 +1,6 @@
 package com.ecommerce.controller.admin;
 
+import com.ecommerce.annotation.Audit;
 import com.ecommerce.dto.request.CategoryRequest;
 import com.ecommerce.dto.response.ApiResponse;
 import com.ecommerce.dto.response.CategoryResponse;
@@ -32,18 +33,21 @@ public class CategoryAdminController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
+    @Audit(action = "CREATE_CATEGORY")
     public ApiResponse<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
         return ApiResponse.created(categoryService.createCategory(request));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audit(action = "UPDATE_CATEGORY")
     public ApiResponse<CategoryResponse> updateCategory(@PathVariable Long id, @Valid @RequestBody CategoryRequest request) {
         return ApiResponse.success(categoryService.updateCategory(id, request));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audit(action = "DELETE_CATEGORY")
     public ApiResponse<Void> deleteCategory(@PathVariable Long id) {
         categoryService.deleteCategory(id);
         return ApiResponse.success(null, "Xóa danh mục thành công");

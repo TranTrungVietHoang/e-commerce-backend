@@ -6,14 +6,13 @@ import com.ecommerce.dto.response.product.ProductResponse;
 import com.ecommerce.entity.Product;
 import com.ecommerce.entity.ProductImage;
 import com.ecommerce.repository.ProductRepository;
+import com.ecommerce.repository.FlashSaleProductRepository;
 import com.ecommerce.service.HomeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,6 +21,7 @@ import java.util.stream.Collectors;
 public class HomeServiceImpl implements HomeService {
 
     private final ProductRepository productRepository;
+    private final FlashSaleProductRepository flashSaleProductRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -58,26 +58,22 @@ public class HomeServiceImpl implements HomeService {
         res.setStockQuantity(product.getStockQuantity());
         res.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);
         res.setPrimaryImageUrl(resolvePrimaryImage(product));
-        res.setEffectivePrice(resolveEffectivePrice(product));
-        res.setFlashSaleActive(isFlashSaleActive(product));
-        res.setFlashSalePrice(product.getFlashSalePrice());
-        res.setFlashSaleStartAt(product.getFlashSaleStartAt());
-        res.setFlashSaleEndAt(product.getFlashSaleEndAt());
+
+        // Tìm thông tin Flash Sale
+        flashSaleProductRepository.findActiveByProductId(product.getId()).ifPresent(fsp -> {
+            res.setFlashSaleActive(true);
+            res.setFlashSalePrice(fsp.getFlashSalePrice());
+            res.setFlashSaleStartAt(fsp.getFlashSale().getStartTime());
+            res.setFlashSaleEndAt(fsp.getFlashSale().getEndTime());
+            res.setEffectivePrice(fsp.getFlashSalePrice());
+        });
+
+        if (res.getEffectivePrice() == null) {
+            res.setEffectivePrice(product.getBasePrice());
+            res.setFlashSaleActive(false);
+        }
+
         return res;
-    }
-
-    private boolean isFlashSaleActive(Product product) {
-        LocalDateTime now = LocalDateTime.now();
-        return Boolean.TRUE.equals(product.getFlashSaleEnabled())
-                && product.getFlashSalePrice() != null
-                && product.getFlashSaleStartAt() != null
-                && product.getFlashSaleEndAt() != null
-                && !now.isBefore(product.getFlashSaleStartAt())
-                && now.isBefore(product.getFlashSaleEndAt());
-    }
-
-    private BigDecimal resolveEffectivePrice(Product product) {
-        return isFlashSaleActive(product) ? product.getFlashSalePrice() : product.getBasePrice();
     }
 
     private String resolvePrimaryImage(Product product) {

@@ -9,6 +9,7 @@ import com.ecommerce.exception.ErrorCode;
 import com.ecommerce.repository.ProductRepository;
 import com.ecommerce.repository.UserRepository;
 import com.ecommerce.repository.WishlistRepository;
+import com.ecommerce.repository.FlashSaleProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,7 @@ public class WishlistService {
     private final WishlistRepository wishlistRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final FlashSaleProductRepository flashSaleProductRepository;
 
     @Transactional
     public WishlistResponse addToWishlist(Long userId, Long productId) {
@@ -69,8 +71,9 @@ public class WishlistService {
                 .id(wishlist.getId())
                 .productId(product.getId())
                 .productName(product.getName())
-                .productPrice(product.getFlashSaleEnabled() && product.getFlashSalePrice() != null ? 
-                              product.getFlashSalePrice() : product.getBasePrice())
+                .productPrice(flashSaleProductRepository.findActiveByProductId(product.getId())
+                        .map(fsp -> fsp.getFlashSalePrice())
+                        .orElse(product.getBasePrice()))
                 .productImageUrl(imageUrl)
                 .addedAt(wishlist.getAddedAt())
                 .build();

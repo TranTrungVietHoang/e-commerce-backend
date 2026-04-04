@@ -43,18 +43,6 @@ public class Product {
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity = 0;
 
-    @Column(name = "flash_sale_price", precision = 18, scale = 2)
-    private BigDecimal flashSalePrice;
-
-    @Column(name = "flash_sale_start_at")
-    private LocalDateTime flashSaleStartAt;
-
-    @Column(name = "flash_sale_end_at")
-    private LocalDateTime flashSaleEndAt;
-
-    @Column(name = "flash_sale_enabled", nullable = false)
-    private Boolean flashSaleEnabled = false;
-
     @Column(length = 20)
     private String status = "ACTIVE"; // ACTIVE, INACTIVE, DELETED
 

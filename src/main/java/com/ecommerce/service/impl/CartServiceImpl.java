@@ -17,13 +17,14 @@ import com.ecommerce.repository.CartRepository;
 import com.ecommerce.repository.ProductRepository;
 import com.ecommerce.repository.ProductVariantRepository;
 import com.ecommerce.repository.UserRepository;
+import com.ecommerce.repository.FlashSaleProductRepository;
+import com.ecommerce.entity.FlashSaleProduct;
 import com.ecommerce.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -37,6 +38,7 @@ public class CartServiceImpl implements CartService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
+    private final FlashSaleProductRepository flashSaleProductRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -157,21 +159,14 @@ public class CartServiceImpl implements CartService {
         return variant != null ? variant.getStock() : product.getStockQuantity();
     }
 
-    private boolean isFlashSaleActive(Product product) {
-        LocalDateTime now = LocalDateTime.now();
-        return Boolean.TRUE.equals(product.getFlashSaleEnabled())
-                && product.getFlashSalePrice() != null
-                && product.getFlashSaleStartAt() != null
-                && product.getFlashSaleEndAt() != null
-                && !now.isBefore(product.getFlashSaleStartAt())
-                && now.isBefore(product.getFlashSaleEndAt());
-    }
-
     private BigDecimal resolveCurrentUnitPrice(Product product, ProductVariant variant) {
         BigDecimal baseVariantPrice = variant != null ? variant.getPrice() : product.getBasePrice();
-        if (isFlashSaleActive(product) && product.getFlashSalePrice() != null) {
-            return product.getFlashSalePrice().min(baseVariantPrice);
+        
+        Optional<FlashSaleProduct> fspOpt = flashSaleProductRepository.findActiveByProductId(product.getId());
+        if (fspOpt.isPresent()) {
+            return fspOpt.get().getFlashSalePrice().min(baseVariantPrice);
         }
+        
         return baseVariantPrice;
     }
 
@@ -211,9 +206,18 @@ public class CartServiceImpl implements CartService {
             itemResponse.setUnitPrice(currentUnitPrice);
             itemResponse.setLineTotal(currentUnitPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
             itemResponse.setBasePrice(item.getVariant() != null ? item.getVariant().getPrice() : item.getProduct().getBasePrice());
-            itemResponse.setFlashSalePrice(item.getProduct().getFlashSalePrice());
-            itemResponse.setFlashSaleActive(isFlashSaleActive(item.getProduct()));
-            itemResponse.setFlashSaleEndAt(item.getProduct().getFlashSaleEndAt());
+            
+            // Cập nhật thông tin Flash Sale từ bảng mới
+            flashSaleProductRepository.findActiveByProductId(item.getProduct().getId()).ifPresent(fsp -> {
+                itemResponse.setFlashSaleActive(true);
+                itemResponse.setFlashSalePrice(fsp.getFlashSalePrice());
+                itemResponse.setFlashSaleEndAt(fsp.getFlashSale().getEndTime());
+            });
+
+            if (itemResponse.getFlashSaleActive() == null) {
+                itemResponse.setFlashSaleActive(false);
+            }
+
             return itemResponse;
         }).collect(Collectors.toList()));
 
