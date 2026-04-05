@@ -67,6 +67,8 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(req.getDescription());
         product.setBasePrice(req.getBasePrice());
         product.setStatus(normalizeStatus(req.getStatus(), "ACTIVE"));
+        product.setModerationStatus("PENDING"); // Mặc định chờ duyệt cho tất cả sản phẩm mới
+
         // logic applyFlashSale cũ đã bị gỡ bỏ
 
         product.setSlug(generateTemporarySlug(req.getName()));
@@ -279,6 +281,7 @@ public class ProductServiceImpl implements ProductService {
         response.setPrimaryImageUrl(resolvePrimaryImage(product));
         response.setStockQuantity(product.getStockQuantity());
         response.setStatus(product.getStatus());
+        response.setModerationStatus(product.getModerationStatus());
         response.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);
         response.setRating(product.getRating());
         response.setSoldCount(product.getSoldCount());
@@ -387,5 +390,27 @@ public class ProductServiceImpl implements ProductService {
                 .trim()
                 .replaceAll("\\s+", "-")
                 .replaceAll("-{2,}", "-");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getPendingProducts(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return productRepository.findByModerationStatus("PENDING", pageable)
+                .map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional
+    public void moderateProduct(Long id, String status) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        
+        if (!List.of("APPROVED", "REJECTED").contains(status.toUpperCase())) {
+            throw new BusinessException("Trạng thái phê duyệt không hợp lệ");
+        }
+        
+        product.setModerationStatus(status.toUpperCase());
+        productRepository.save(product);
     }
 }

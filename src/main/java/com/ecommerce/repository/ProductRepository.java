@@ -18,20 +18,25 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("SELECT p FROM Product p WHERE p.shop.id = :shopId AND (p.status IS NULL OR p.status <> :status)")
     Page<Product> findByShopIdAndStatusNot(@Param("shopId") Long shopId, @Param("status") String status, Pageable pageable);
 
-    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' ORDER BY p.createdAt DESC")
+    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND p.moderationStatus = 'APPROVED' ORDER BY p.createdAt DESC")
     List<Product> findAllActiveProducts();
 
     Optional<Product> findByIdAndShopId(Long id, Long shopId);
     Optional<Product> findBySlug(String slug);
     long countByStatus(String status);
 
-    // 8 sản phẩm mới nhất còn active
-    List<Product> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
+    // 8 sản phẩm mới nhất còn active và đã duyệt
+    @Query("SELECT p FROM Product p WHERE p.status = :status AND p.moderationStatus = 'APPROVED' ORDER BY p.createdAt DESC")
+    List<Product> findActiveAndApprovedOrderByCreatedAtDesc(@Param("status") String status, Pageable pageable);
 
-    // 8 sản phẩm bán chạy nhất còn active
-    List<Product> findByStatusOrderBySoldCountDesc(String status, Pageable pageable);
+    // 8 sản phẩm bán chạy nhất còn active và đã duyệt
+    @Query("SELECT p FROM Product p WHERE p.status = :status AND p.moderationStatus = 'APPROVED' ORDER BY p.soldCount DESC")
+    List<Product> findActiveAndApprovedOrderBySoldCountDesc(@Param("status") String status, Pageable pageable);
 
     // Autocomplete suggestions – tìm theo tên, giới hạn kết quả
-    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
+    @Query("SELECT p FROM Product p WHERE p.status = 'ACTIVE' AND p.moderationStatus = 'APPROVED' AND LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Product> findSuggestions(@Param("keyword") String keyword, Pageable pageable);
+
+    // Danh sách chờ duyệt cho Admin
+    Page<Product> findByModerationStatus(String moderationStatus, Pageable pageable);
 }

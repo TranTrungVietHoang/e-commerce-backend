@@ -14,7 +14,7 @@ import java.util.List;
 @Table(name = "products")
 @Data
 @EqualsAndHashCode(exclude = {"shop", "category", "images", "variants"})
-@ToString(exclude = {"shop", "category", "images", "variants"})
+@ToString(exclude = {"shop", "category", "images", "variants"}) 
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,11 +46,17 @@ public class Product {
     @Column(length = 20)
     private String status = "ACTIVE"; // ACTIVE, INACTIVE, DELETED
 
+    @Column(name = "moderation_status", nullable = false, length = 20)
+    private String moderationStatus = "PENDING"; // PENDING, APPROVED, REJECTED
+
     @Column(precision = 3, scale = 2)
     private BigDecimal rating = BigDecimal.ZERO;
 
     @Column(name = "sold_count")
     private Long soldCount = 0L;
+
+    @Column(name = "flash_sale_enabled", nullable = false)
+    private Boolean flashSaleEnabled = false;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -68,6 +74,9 @@ public class Product {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (moderationStatus == null) {
+            moderationStatus = "PENDING";
+        }
     }
 
     @PreUpdate

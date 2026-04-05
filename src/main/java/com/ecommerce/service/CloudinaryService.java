@@ -33,13 +33,30 @@ public class CloudinaryService {
                     ObjectUtils.asMap(
                             "folder", folder,
                             "resource_type", "image",
-                            "allowed_formats", "jpg,jpeg,png,webp,gif"
+                            "allowed_formats", "jpg,jpeg,png,webp,gif",
+                            "moderation", "aws_rek" // <--- Kích hoạt AI AWS Rekognition quét ảnh
                     )
             );
+
+            // Kiểm tra trạng thái duyệt của AI (nếu Cloudinary trả về kết quả ngay lập tức)
+            if (result.get("moderation") != null) {
+                log.info("AI Moderation status: {}", result.get("moderation"));
+                // Một số thiết lập Cloudinary có thể tự động trả về 'rejected' nếu cấu hình ngưỡng trên Dashboard
+                Object moderation = result.get("moderation");
+                if (moderation.toString().contains("status=rejected")) {
+                    throw new AppException(ErrorCode.CONTENT_VIOLATION);
+                }
+            }
+
             return (String) result.get("secure_url");
         } catch (IOException e) {
             log.error("Cloudinary upload failed: {}", e.getMessage());
             throw new AppException(ErrorCode.UNCATEGORIZED_ERROR);
+        } catch (Exception e) {
+            if (e.getMessage() != null && e.getMessage().contains("moderation")) {
+                throw new AppException(ErrorCode.CONTENT_VIOLATION);
+            }
+            throw e;
         }
     }
 

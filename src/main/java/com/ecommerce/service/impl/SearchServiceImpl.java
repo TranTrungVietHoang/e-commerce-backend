@@ -40,6 +40,7 @@ public class SearchServiceImpl implements SearchService {
         // Ghép các điều kiện lọc bằng Specification
         Specification<Product> spec = Specification
                 .where(ProductSpecification.isActive())
+                .and(ProductSpecification.isApproved()) // <--- Thêm chỉ lấy sản phẩm đã duyệt
                 .and(ProductSpecification.hasKeyword(keyword))
                 .and(ProductSpecification.hasCategoryId(categoryId))
                 .and(ProductSpecification.hasMinPrice(minPrice))
@@ -91,6 +92,7 @@ public class SearchServiceImpl implements SearchService {
         res.setRating(product.getRating());
         res.setSoldCount(product.getSoldCount());
         res.setStatus(product.getStatus());
+        res.setModerationStatus(product.getModerationStatus());
         res.setCreatedAt(product.getCreatedAt());
         res.setStockQuantity(product.getStockQuantity());
         res.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);

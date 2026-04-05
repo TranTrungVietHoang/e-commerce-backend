@@ -35,12 +35,12 @@ public class HomeServiceImpl implements HomeService {
             new BannerResponse("Flash Sale 12H", "Săn deal cực sốc chỉ hôm nay", "", "/search")
         ));
 
-        // 8 sản phẩm mới nhất
-        List<Product> newest = productRepository.findByStatusOrderByCreatedAtDesc("ACTIVE", PageRequest.of(0, 8));
+        // 8 sản phẩm mới nhất (chỉ lấy đã duyệt)
+        List<Product> newest = productRepository.findActiveAndApprovedOrderByCreatedAtDesc("ACTIVE", PageRequest.of(0, 8));
         response.setNewestProducts(newest.stream().map(this::mapToResponse).collect(Collectors.toList()));
 
-        // 8 sản phẩm bán chạy nhất
-        List<Product> bestsellers = productRepository.findByStatusOrderBySoldCountDesc("ACTIVE", PageRequest.of(0, 8));
+        // 8 sản phẩm bán chạy nhất (chỉ lấy đã duyệt)
+        List<Product> bestsellers = productRepository.findActiveAndApprovedOrderBySoldCountDesc("ACTIVE", PageRequest.of(0, 8));
         response.setBestSellingProducts(bestsellers.stream().map(this::mapToResponse).collect(Collectors.toList()));
 
         return response;
@@ -54,6 +54,7 @@ public class HomeServiceImpl implements HomeService {
         res.setRating(product.getRating());
         res.setSoldCount(product.getSoldCount());
         res.setStatus(product.getStatus());
+        res.setModerationStatus(product.getModerationStatus());
         res.setCreatedAt(product.getCreatedAt());
         res.setStockQuantity(product.getStockQuantity());
         res.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);

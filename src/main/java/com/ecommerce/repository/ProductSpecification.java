@@ -57,4 +57,9 @@ public class ProductSpecification {
     public static Specification<Product> isActive() {
         return (root, query, cb) -> cb.equal(root.get("status"), "ACTIVE");
     }
+
+    /** Chỉ lấy sản phẩm đã được duyệt nội dung */
+    public static Specification<Product> isApproved() {
+        return (root, query, cb) -> cb.equal(root.get("moderationStatus"), "APPROVED");
+    }
 }
