@@ -13,6 +13,7 @@ public class ProductResponse {
     private String primaryImageUrl;
     private Integer stockQuantity;
     private String status;
+    private String moderationStatus;
     private String categoryName;
     private BigDecimal rating;
     private Long soldCount;

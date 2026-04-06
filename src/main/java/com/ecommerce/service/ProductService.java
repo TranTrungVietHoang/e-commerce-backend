@@ -19,4 +19,8 @@ public interface ProductService {
     void softDeleteProduct(Long id, Long shopId);
     VariantResponse updateVariantStock(Long variantId, int newStock, Long shopId);
     List<LowStockVariantResponse> getLowStockVariants(Long shopId);
+
+    // Moderation
+    Page<ProductResponse> getPendingProducts(int page, int size);
+    void moderateProduct(Long id, String status);
 }

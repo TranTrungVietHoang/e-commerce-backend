@@ -20,6 +20,7 @@ import com.ecommerce.repository.CategoryRepository;
 import com.ecommerce.repository.ProductRepository;
 import com.ecommerce.repository.ProductVariantRepository;
 import com.ecommerce.repository.ShopRepository;
+import com.ecommerce.repository.FlashSaleProductRepository;
 import com.ecommerce.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,9 +30,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.text.Normalizer;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -51,6 +50,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
     private final ProductVariantRepository productVariantRepository;
     private final CartItemRepository cartItemRepository;
+    private final FlashSaleProductRepository flashSaleProductRepository;
 
     @Override
     @Transactional
@@ -67,7 +67,9 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(req.getDescription());
         product.setBasePrice(req.getBasePrice());
         product.setStatus(normalizeStatus(req.getStatus(), "ACTIVE"));
-        applyFlashSale(product, req.getFlashSaleEnabled(), req.getFlashSalePrice(), req.getFlashSaleStartAt(), req.getFlashSaleEndAt());
+        product.setModerationStatus("PENDING"); // Mặc định chờ duyệt cho tất cả sản phẩm mới
+
+        // logic applyFlashSale cũ đã bị gỡ bỏ
 
         product.setSlug(generateTemporarySlug(req.getName()));
         product = productRepository.save(product);
@@ -142,18 +144,8 @@ public class ProductServiceImpl implements ProductService {
             product.setStatus(normalizeStatus(req.getStatus(), product.getStatus()));
         }
 
-        if (req.getFlashSaleEnabled() != null
-                || req.getFlashSalePrice() != null
-                || req.getFlashSaleStartAt() != null
-                || req.getFlashSaleEndAt() != null) {
-            applyFlashSale(
-                    product,
-                    req.getFlashSaleEnabled() != null ? req.getFlashSaleEnabled() : product.getFlashSaleEnabled(),
-                    req.getFlashSalePrice() != null ? req.getFlashSalePrice() : product.getFlashSalePrice(),
-                    req.getFlashSaleStartAt() != null ? req.getFlashSaleStartAt() : product.getFlashSaleStartAt(),
-                    req.getFlashSaleEndAt() != null ? req.getFlashSaleEndAt() : product.getFlashSaleEndAt()
-            );
-        }
+        // Bỏ logic applyFlashSale trực tiếp vào Product
+        // Việc đăng ký sản phẩm vào Flash Sale sẽ được thực hiện qua FlashSaleSellerController
 
         if (req.getImageUrls() != null) {
             replaceImages(product, req.getImageUrls());
@@ -289,15 +281,26 @@ public class ProductServiceImpl implements ProductService {
         response.setPrimaryImageUrl(resolvePrimaryImage(product));
         response.setStockQuantity(product.getStockQuantity());
         response.setStatus(product.getStatus());
+        response.setModerationStatus(product.getModerationStatus());
         response.setCategoryName(product.getCategory() != null ? product.getCategory().getName() : null);
         response.setRating(product.getRating());
         response.setSoldCount(product.getSoldCount());
         response.setCreatedAt(product.getCreatedAt());
-        response.setEffectivePrice(resolveEffectivePrice(product));
-        response.setFlashSaleActive(isFlashSaleActive(product));
-        response.setFlashSalePrice(product.getFlashSalePrice());
-        response.setFlashSaleStartAt(product.getFlashSaleStartAt());
-        response.setFlashSaleEndAt(product.getFlashSaleEndAt());
+
+        // Tìm thông tin Flash Sale từ bảng mới
+        flashSaleProductRepository.findActiveByProductId(product.getId()).ifPresent(fsp -> {
+            response.setFlashSaleActive(true);
+            response.setFlashSalePrice(fsp.getFlashSalePrice());
+            response.setFlashSaleStartAt(fsp.getFlashSale().getStartTime());
+            response.setFlashSaleEndAt(fsp.getFlashSale().getEndTime());
+            response.setEffectivePrice(fsp.getFlashSalePrice());
+        });
+
+        if (response.getEffectivePrice() == null) {
+            response.setEffectivePrice(product.getBasePrice());
+            response.setFlashSaleActive(false);
+        }
+
         return response;
     }
 
@@ -351,35 +354,6 @@ public class ProductServiceImpl implements ProductService {
         return response;
     }
 
-    private void applyFlashSale(Product product, Boolean enabled, BigDecimal price, LocalDateTime startAt, LocalDateTime endAt) {
-        boolean flashSaleEnabled = Boolean.TRUE.equals(enabled);
-        if (!flashSaleEnabled) {
-            product.setFlashSaleEnabled(false);
-            product.setFlashSalePrice(null);
-            product.setFlashSaleStartAt(null);
-            product.setFlashSaleEndAt(null);
-            return;
-        }
-
-        if (price == null) {
-            throw new BusinessException("Flash sale can gia khuyen mai");
-        }
-        if (startAt == null || endAt == null) {
-            throw new BusinessException("Flash sale can thoi gian bat dau va ket thuc");
-        }
-        if (!endAt.isAfter(startAt)) {
-            throw new BusinessException("Thoi gian ket thuc flash sale phai sau thoi gian bat dau");
-        }
-        if (product.getBasePrice() != null && price.compareTo(product.getBasePrice()) >= 0) {
-            throw new BusinessException("Gia flash sale phai nho hon gia goc");
-        }
-
-        product.setFlashSaleEnabled(true);
-        product.setFlashSalePrice(price);
-        product.setFlashSaleStartAt(startAt);
-        product.setFlashSaleEndAt(endAt);
-    }
-
     private String normalizeStatus(String status, String fallback) {
         String normalized = status == null || status.isBlank()
                 ? fallback
@@ -388,20 +362,6 @@ public class ProductServiceImpl implements ProductService {
             throw new BusinessException("Status san pham khong hop le");
         }
         return normalized;
-    }
-
-    private boolean isFlashSaleActive(Product product) {
-        LocalDateTime now = LocalDateTime.now();
-        return Boolean.TRUE.equals(product.getFlashSaleEnabled())
-                && product.getFlashSalePrice() != null
-                && product.getFlashSaleStartAt() != null
-                && product.getFlashSaleEndAt() != null
-                && !now.isBefore(product.getFlashSaleStartAt())
-                && now.isBefore(product.getFlashSaleEndAt());
-    }
-
-    private BigDecimal resolveEffectivePrice(Product product) {
-        return isFlashSaleActive(product) ? product.getFlashSalePrice() : product.getBasePrice();
     }
 
     private String resolvePrimaryImage(Product product) {
@@ -430,5 +390,27 @@ public class ProductServiceImpl implements ProductService {
                 .trim()
                 .replaceAll("\\s+", "-")
                 .replaceAll("-{2,}", "-");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getPendingProducts(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return productRepository.findByModerationStatus("PENDING", pageable)
+                .map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional
+    public void moderateProduct(Long id, String status) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        
+        if (!List.of("APPROVED", "REJECTED").contains(status.toUpperCase())) {
+            throw new BusinessException("Trạng thái phê duyệt không hợp lệ");
+        }
+        
+        product.setModerationStatus(status.toUpperCase());
+        productRepository.save(product);
     }
 }

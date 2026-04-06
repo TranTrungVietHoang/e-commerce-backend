@@ -67,7 +67,13 @@ public enum ErrorCode {
     // =========================================================
     SHOP_NOT_FOUND(7001, "Cửa hàng không tồn tại", HttpStatus.NOT_FOUND),
     SHOP_ALREADY_EXISTS(7002, "Bạn đã đăng ký một cửa hàng rồi", HttpStatus.CONFLICT),
-    SHOP_NAME_EXISTS(7003, "Tên cửa hàng này đã được sử dụng", HttpStatus.CONFLICT);
+    SHOP_NAME_EXISTS(7003, "Tên cửa hàng này đã được sử dụng", HttpStatus.CONFLICT),
+    
+    // =========================================================
+    // CONTENT (8xxx)
+    // =========================================================
+    CONTENT_VIOLATION(8001, "Hình ảnh của bạn vi phạm chính sách nội dung (AI phát hiện nội dung không phù hợp). Vui lòng chọn ảnh khác.", HttpStatus.BAD_REQUEST);
+
 
     private final int code;
     private final String message;

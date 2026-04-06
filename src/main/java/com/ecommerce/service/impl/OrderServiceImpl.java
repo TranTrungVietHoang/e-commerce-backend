@@ -8,6 +8,7 @@ import com.ecommerce.entity.*;
 import com.ecommerce.exception.BusinessException;
 import com.ecommerce.exception.ResourceNotFoundException;
 import com.ecommerce.repository.*;
+import com.ecommerce.repository.FlashSaleProductRepository;
 import com.ecommerce.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductVariantRepository productVariantRepository;
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
+    private final FlashSaleProductRepository flashSaleProductRepository;
 
     @Override
     public OrderDetailResponse createOrder(CreateOrderRequest request, Long customerId) {
@@ -75,6 +77,15 @@ public class OrderServiceImpl implements OrderService {
                     throw new BusinessException("Sản phẩm " + product.getName() + " không đủ hàng");
                 }
             }
+
+            // Kiểm tra tồn kho Flash Sale nếu đang áp dụng giá sale
+            flashSaleProductRepository.findActiveByProductId(product.getId()).ifPresent(fsp -> {
+                if (cartItem.getUnitPrice().compareTo(fsp.getFlashSalePrice()) == 0) {
+                    if (fsp.getSoldCount() + cartItem.getQuantity() > fsp.getSlots()) {
+                        throw new BusinessException("Sản phẩm " + product.getName() + " đã hết lượt mua Flash Sale");
+                    }
+                }
+            });
 
             BigDecimal itemTotal = cartItem.getUnitPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity()));
             subtotal = subtotal.add(itemTotal);
@@ -139,6 +150,14 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setVariant(variant);
             orderItem.setQuantity(cartItem.getQuantity());
             orderItem.setUnitPrice(cartItem.getUnitPrice());
+
+            // Cập nhật soldCount cho Flash Sale nếu có
+            flashSaleProductRepository.findActiveByProductId(product.getId()).ifPresent(fsp -> {
+                if (cartItem.getUnitPrice().compareTo(fsp.getFlashSalePrice()) == 0) {
+                    fsp.setSoldCount(fsp.getSoldCount() + cartItem.getQuantity());
+                    flashSaleProductRepository.save(fsp);
+                }
+            });
 
             orderItemRepository.save(orderItem);
             savedOrder.getItems().add(orderItem);
@@ -253,6 +272,14 @@ public class OrderServiceImpl implements OrderService {
                 item.getProduct().setStockQuantity(item.getProduct().getStockQuantity() + item.getQuantity());
                 productRepository.save(item.getProduct());
             }
+
+            // Hoàn lại soldCount cho Flash Sale nếu có
+            flashSaleProductRepository.findActiveByProductId(item.getProduct().getId()).ifPresent(fsp -> {
+                if (item.getUnitPrice().compareTo(fsp.getFlashSalePrice()) == 0) {
+                    fsp.setSoldCount(Math.max(0, fsp.getSoldCount() - item.getQuantity()));
+                    flashSaleProductRepository.save(fsp);
+                }
+            });
         }
 
         order.setStatus("CANCELLED");
@@ -293,6 +320,14 @@ public class OrderServiceImpl implements OrderService {
                 item.getProduct().setStockQuantity(item.getProduct().getStockQuantity() + item.getQuantity());
                 productRepository.save(item.getProduct());
             }
+
+            // Hoàn lại soldCount cho Flash Sale nếu có
+            flashSaleProductRepository.findActiveByProductId(item.getProduct().getId()).ifPresent(fsp -> {
+                if (item.getUnitPrice().compareTo(fsp.getFlashSalePrice()) == 0) {
+                    fsp.setSoldCount(Math.max(0, fsp.getSoldCount() - item.getQuantity()));
+                    flashSaleProductRepository.save(fsp);
+                }
+            });
         }
 
         order.setStatus("CANCELLED");

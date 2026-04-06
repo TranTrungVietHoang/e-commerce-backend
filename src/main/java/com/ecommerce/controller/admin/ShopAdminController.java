@@ -1,5 +1,6 @@
 package com.ecommerce.controller.admin;
 
+import com.ecommerce.annotation.Audit;
 import com.ecommerce.dto.request.shop.ShopApprovalRequest;
 import com.ecommerce.dto.response.ApiResponse;
 import com.ecommerce.dto.response.shop.ShopResponse;
@@ -12,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/shops")
+@RequestMapping("/api/v1/admin/shops")
 @RequiredArgsConstructor
 public class ShopAdminController {
 
@@ -28,6 +29,7 @@ public class ShopAdminController {
     // Phê duyệt hoặc Từ chối Shop (Approve/Reject)
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
+    @Audit(action = "APPROVE_SHOP")
     public ApiResponse<Void> approveShop(@PathVariable Long id, @Valid @RequestBody ShopApprovalRequest request) {
         shopService.approveShop(id, request.getStatus());
         return ApiResponse.success(null, "Cập nhật trạng thái duyệt cửa hàng thành công");

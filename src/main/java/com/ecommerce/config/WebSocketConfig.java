@@ -34,16 +34,19 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final JwtUtil jwtUtil;
     private final UserDetailsServiceImpl userDetailsService;
 
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins}")
+    private List<String> allowedOrigins;
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Endpoint 1: có SockJS fallback (dùng cho backend test tools)
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns(allowedOrigins.toArray(new String[0]))
                 .withSockJS();
 
         // Endpoint 2: Native WebSocket thuần (cho Vite React FE dùng @stomp/stompjs trực tiếp)
         registry.addEndpoint("/ws-native")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOriginPatterns(allowedOrigins.toArray(new String[0]));
     }
 
     @Override
@@ -92,10 +95,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                 }
                             } catch (Exception e) {
                                 log.error("Lỗi xác thực JWT của WebSocket", e);
+                                throw new java.lang.IllegalArgumentException("Lỗi xác thực JWT WebSocket");
                             }
+                        } else {
+                            log.warn("WebSocket CONNECT bị từ chối do Authorization không hợp lệ");
+                            throw new java.lang.IllegalArgumentException("Thiếu token");
                         }
                     } else {
                         log.warn("WebSocket CONNECT bị từ chối do thiếu Header Authorization");
+                        throw new java.lang.IllegalArgumentException("Unauthorized WebSocket Connection");
                     }
                 }
                 return message;

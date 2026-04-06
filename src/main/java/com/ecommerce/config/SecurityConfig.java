@@ -3,22 +3,18 @@ package com.ecommerce.config;
 import com.ecommerce.security.CustomAccessDeniedHandler;
 import com.ecommerce.security.CustomAuthenticationEntryPoint;
 import com.ecommerce.security.JwtAuthenticationFilter;
-import com.ecommerce.security.UserDetailsServiceImpl;
+import com.ecommerce.security.oauth2.CustomOAuth2UserService;
+import com.ecommerce.security.oauth2.OAuth2AuthenticationSuccessHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -34,9 +30,14 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final UserDetailsServiceImpl userDetailsService;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
+    private final AuthenticationProvider authenticationProvider;
+
+    @org.springframework.beans.factory.annotation.Value("${cors.allowed-origins}")
+    private List<String> allowedOrigins;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -54,50 +55,39 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/home/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/search/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/api/v1/test/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/ws-native/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/reviews/product/**").permitAll()
 
                         // ADMIN ONLY
-                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/admin/**", "/api/admin/**").hasRole("ADMIN")
+                        
+                        // SELLER ONLY
+                        .requestMatchers("/api/v1/seller/**", "/api/seller/**").hasAnyRole("SELLER", "ADMIN")
 
                         // OTHERS
                         .anyRequest().authenticated()
+                )
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(customOAuth2UserService)
+                        )
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(customAuthenticationEntryPoint)
                         .accessDeniedHandler(customAccessDeniedHandler)
                 )
-                .authenticationProvider(authenticationProvider())
+                .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:3001", "http://localhost:5173"));
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
