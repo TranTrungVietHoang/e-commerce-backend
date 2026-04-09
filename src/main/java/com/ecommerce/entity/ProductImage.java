@@ -1,0 +1,32 @@
+package com.ecommerce.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
+
+@Entity
+@Table(name = "product_images")
+@Data
+@EqualsAndHashCode(exclude = {"product"})
+@ToString(exclude = {"product"})
+public class ProductImage {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
+
+    @Column(name = "image_url", nullable = false, length = 500)
+    private String imageUrl;
+
+    @Column(name = "is_primary")
+    private Boolean isPrimary = false;
+
+    // Explicit setters to avoid IDE/Lombok cache issues
+    public void setProduct(Product product) { this.product = product; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public void setIsPrimary(Boolean isPrimary) { this.isPrimary = isPrimary; }
+}

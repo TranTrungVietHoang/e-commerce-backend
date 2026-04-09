@@ -13,5 +13,5 @@ WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 # Mở cổng 8080
 EXPOSE 8080
-# Lệnh chạy ứng dụng
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Lệnh chạy ứng dụng với cấu hình múi giờ Việt Nam
+ENTRYPOINT ["java", "-Duser.timezone=Asia/Ho_Chi_Minh", "-jar", "app.jar"]

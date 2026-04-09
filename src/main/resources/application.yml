@@ -1,24 +1,102 @@
 spring:
   application:
     name: e-commerce-backend
+  config:
+    import: optional:file:.env[.properties]
+  
+  # ============================================
+  # Database Configuration (SQL Server)
+  # SEE: .env file for values
+  # DO NOT hardcode passwords here!
+  # ============================================
   datasource:
-    # Cấu hình SQL Server - Sử dụng biến môi trường để bảo mật (Dành cho Team)
-    url: jdbc:sqlserver://localhost:1433;databaseName=ecommerce_marketplace;encrypt=true;trustServerCertificate=true
-    username: ${DB_USERNAME:sa} # Mặc định là sa nếu không cài đặt biến môi trường
-    password: ${DB_PASSWORD:}   # Mặc định để trống nếu không cài đặt biến môi trường
+    url: ${DB_URL:jdbc:sqlserver://${DB_HOST:localhost}:${DB_PORT:1433};databaseName=${DB_NAME:ecommerce_marketplace};encrypt=true;trustServerCertificate=true;sendStringParametersAsUnicode=true;characterEncoding=UTF-8}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.SQLServerDialect
         format_sql: true
 
+  # ============================================
+  # Email Configuration (Gmail SMTP)
+  # SEE: .env file for values
+  # ============================================
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+# ============================================
+# JWT Configuration
+# SEE: .env file for values
+# ============================================
+jwt:
+  secret: ${JWT_SECRET:ThisIsADefaultSecretKeyThatShouldBeOverriddenInProductionEnvironments99!}
+  expiration:
+    access: ${JWT_ACCESS_EXPIRATION:900000}
+    refresh: ${JWT_REFRESH_EXPIRATION:604800000}
+
+# ============================================
+# Cloudinary Configuration (Image Storage)
+# SEE: .env file for values
+# ============================================
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:demo}
+  api-key: ${CLOUDINARY_API_KEY:demo}
+  api-secret: ${CLOUDINARY_API_SECRET:demo}
+
+# ============================================
+# Sepay Payment Gateway Configuration
+# SEE: .env file for values
+# ============================================
+sepay:
+  api-id: ${SEPAY_API_ID:demo}
+  api-key: ${SEPAY_API_KEY:demo}
+  api-secret: ${SEPAY_API_SECRET:demo}
+  api-url: ${SEPAY_API_URL:https://my.sepay.vn/userapi}
+  webhook-secret: ${SEPAY_WEBHOOK_SECRET:demo}
+
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
+
+app:
+  sepay:
+    api-key: ${APP_SEPAY_API_KEY:demo}
 
 logging:
   level:
-    com.ecommerce: DEBUG
+    com.ecommerce: ${LOGGING_LEVEL:INFO}
+
+cors:
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:false}
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:false}
