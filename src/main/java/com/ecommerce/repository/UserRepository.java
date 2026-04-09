@@ -14,7 +14,7 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     // Dùng cho login và UserDetailsService
-    Optional<User> findByEmail(String email);
+    Optional<User> findFirstByEmail(String email);
 
     // Dùng khi đăng ký để kiểm tra trùng
     boolean existsByEmail(String email);

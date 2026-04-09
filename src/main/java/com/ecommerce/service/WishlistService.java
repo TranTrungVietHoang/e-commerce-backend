@@ -1,6 +1,7 @@
 package com.ecommerce.service;
 
 import com.ecommerce.dto.response.WishlistResponse;
+import com.ecommerce.entity.FlashSaleProduct;
 import com.ecommerce.entity.Product;
 import com.ecommerce.entity.User;
 import com.ecommerce.entity.Wishlist;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -71,11 +73,16 @@ public class WishlistService {
                 .id(wishlist.getId())
                 .productId(product.getId())
                 .productName(product.getName())
-                .productPrice(flashSaleProductRepository.findActiveByProductId(product.getId())
-                        .map(fsp -> fsp.getFlashSalePrice())
-                        .orElse(product.getBasePrice()))
+                .productPrice(resolveProductPrice(product))
                 .productImageUrl(imageUrl)
-                .addedAt(wishlist.getAddedAt())
                 .build();
+    }
+
+    private java.math.BigDecimal resolveProductPrice(Product product) {
+        List<FlashSaleProduct> activeFlashSales = flashSaleProductRepository.findActiveByProductId(product.getId());
+        if (!activeFlashSales.isEmpty()) {
+            return activeFlashSales.get(0).getFlashSalePrice();
+        }
+        return product.getBasePrice();
     }
 }

@@ -25,6 +25,7 @@ public class OrderDetailResponse implements Serializable {
     private String recipientName;
     private String recipientPhone;
     private String paymentMethod; // COD, SEPAY_TRANSFER
+    private String voucherCode;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private List<OrderItemDTO> items;
@@ -36,6 +37,7 @@ public class OrderDetailResponse implements Serializable {
         private Long productId;
         private String productName;
         private Long variantId;
+        private String variantName;
         private String variantAttributes;
         private Integer quantity;
         private BigDecimal unitPrice;

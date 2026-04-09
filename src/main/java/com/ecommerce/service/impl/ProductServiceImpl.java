@@ -8,19 +8,24 @@ import com.ecommerce.dto.response.product.ProductDetailResponse;
 import com.ecommerce.dto.response.product.ProductImageResponse;
 import com.ecommerce.dto.response.product.ProductResponse;
 import com.ecommerce.dto.response.product.VariantResponse;
+import com.ecommerce.enums.ShopStatus;
 import com.ecommerce.entity.Category;
+import com.ecommerce.entity.FlashSaleProduct;
 import com.ecommerce.entity.Product;
 import com.ecommerce.entity.ProductImage;
 import com.ecommerce.entity.ProductVariant;
 import com.ecommerce.entity.Shop;
+import com.ecommerce.entity.User;
 import com.ecommerce.exception.BusinessException;
 import com.ecommerce.exception.ResourceNotFoundException;
 import com.ecommerce.repository.CartItemRepository;
 import com.ecommerce.repository.CategoryRepository;
+import com.ecommerce.repository.OrderItemRepository;
 import com.ecommerce.repository.ProductRepository;
 import com.ecommerce.repository.ProductVariantRepository;
 import com.ecommerce.repository.ShopRepository;
 import com.ecommerce.repository.FlashSaleProductRepository;
+import com.ecommerce.repository.UserRepository;
 import com.ecommerce.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -33,12 +38,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class ProductServiceImpl implements ProductService {
 
     private static final Pattern DIACRITICS_PATTERN = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
@@ -51,12 +58,19 @@ public class ProductServiceImpl implements ProductService {
     private final ProductVariantRepository productVariantRepository;
     private final CartItemRepository cartItemRepository;
     private final FlashSaleProductRepository flashSaleProductRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
     public ProductDetailResponse createProduct(CreateProductRequest req, Long shopId) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shop", shopId));
+        
+        if (shop.getStatus() != ShopStatus.APPROVED) {
+            throw new BusinessException("Gian hàng c?a b?n dang l?i ho?c dang b? khoá. Không th? th?m s?n ph?m.");
+        }
+        
         Category category = categoryRepository.findById(req.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category", req.getCategoryId()));
 
@@ -108,6 +122,37 @@ public class ProductServiceImpl implements ProductService {
             throw new ResourceNotFoundException("Product", id);
         }
 
+        // Kiểm tra trạng thái kiểm duyệt
+        if (!"APPROVED".equalsIgnoreCase(product.getModerationStatus())) {
+            boolean isAuthorized = false;
+            try {
+                org.springframework.security.core.Authentication auth = 
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+                
+                if (auth != null && auth.isAuthenticated() && !auth.getPrincipal().equals("anonymousUser")) {
+                    String username = auth.getName();
+                    User currentUser = userRepository.findFirstByEmail(username)
+                            .orElseThrow(() -> new ResourceNotFoundException("User", username));
+                    
+                    // Seller sở hữu sản phẩm hoặc Admin có quyền xem
+                    boolean isOwner = product.getShop().getSeller().getId().equals(currentUser.getId());
+                    boolean isAdmin = auth.getAuthorities().stream()
+                            .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                    
+                    if (isOwner || isAdmin) {
+                        isAuthorized = true;
+                    }
+                }
+            } catch (Exception e) {
+                // Log and ignore to fall through to unauthorized
+                log.warn("Lỗi kiểm tra quyền xem sản phẩm chưa duyệt: {}", e.getMessage());
+            }
+
+            if (!isAuthorized) {
+                throw new BusinessException("Sản phẩm này hiện đang trong quá trình kiểm duyệt và chưa thể hiển thị.");
+            }
+        }
+
         return mapToDetailResponse(product);
     }
 
@@ -116,6 +161,10 @@ public class ProductServiceImpl implements ProductService {
     public ProductDetailResponse updateProduct(Long id, UpdateProductRequest req, Long shopId) {
         Product product = productRepository.findByIdAndShopId(id, shopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+
+        if (product.getShop().getStatus() != ShopStatus.APPROVED) {
+            throw new BusinessException("Gian hàng c?a b?n dang b? khoá. Không th? c?p nh?t s?n ph?m.");
+        }
 
         if ("DELETED".equals(product.getStatus())) {
             throw new BusinessException("San pham da bi xoa");
@@ -155,7 +204,11 @@ public class ProductServiceImpl implements ProductService {
             upsertVariants(product, req.getVariants(), true);
         }
 
-        if (req.getStockQuantity() != null) {
+        // Đồng bộ kho: Nếu có biến thể, tổng kho phải được tính từ biến thể. 
+        // Nếu không có biến thể, mới lấy từ stockQuantity của request.
+        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+            recalculateProductStock(product);
+        } else if (req.getStockQuantity() != null) {
             product.setStockQuantity(req.getStockQuantity());
         }
 
@@ -169,6 +222,20 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findByIdAndShopId(id, shopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", id));
         product.setStatus("DELETED");
+        productRepository.save(product);
+    }
+
+    @Override
+    @Transactional
+    public void updateProductStatusBySeller(Long id, Long shopId, String status) {
+        Product product = productRepository.findByIdAndShopId(id, shopId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", id));
+        
+        if ("DELETED".equals(product.getStatus())) {
+            throw new BusinessException("San pham da bi xoa");
+        }
+        
+        product.setStatus(normalizeStatus(status, product.getStatus()));
         productRepository.save(product);
     }
 
@@ -224,37 +291,48 @@ public class ProductServiceImpl implements ProductService {
     }
 
     private void upsertVariants(Product product, List<CreateVariantRequest> requests, boolean validateRemoval) {
-        product.getVariants().clear();
-
         if (requests == null || requests.isEmpty()) {
+            product.getVariants().clear();
             product.setStockQuantity(0);
             return;
         }
 
-        if (validateRemoval) {
-            List<Long> existingVariantIds = productVariantRepository.findByProductId(product.getId()).stream()
-                    .map(ProductVariant::getId)
-                    .collect(Collectors.toList());
-            Set<Long> incomingIds = requests.stream()
-                    .map(CreateVariantRequest::getId)
-                    .filter(id -> id != null && id > 0)
-                    .collect(Collectors.toSet());
+        // Map existing variants by ID for easy access
+        Map<Long, ProductVariant> existingVariants = product.getVariants().stream()
+                .filter(v -> v.getId() != null)
+                .collect(Collectors.toMap(ProductVariant::getId, v -> v));
 
-            for (Long existingId : existingVariantIds) {
+        Set<Long> incomingIds = requests.stream()
+                .map(CreateVariantRequest::getId)
+                .filter(id -> id != null && id > 0)
+                .collect(Collectors.toSet());
+
+        // 1. Identify and handle removals
+        if (validateRemoval) {
+            existingVariants.keySet().forEach(existingId -> {
                 if (!incomingIds.contains(existingId)) {
                     validateVariantCanBeRemoved(existingId);
                 }
-            }
+            });
         }
+        product.getVariants().removeIf(v -> v.getId() != null && !incomingIds.contains(v.getId()));
 
+        // 2. Update existing or Add new
         for (CreateVariantRequest request : requests) {
-            ProductVariant variant = new ProductVariant();
-            variant.setProduct(product);
+            ProductVariant variant;
+            if (request.getId() != null && request.getId() > 0 && existingVariants.containsKey(request.getId())) {
+                // Update existing
+                variant = existingVariants.get(request.getId());
+            } else {
+                // Add new
+                variant = new ProductVariant();
+                variant.setProduct(product);
+                product.getVariants().add(variant);
+            }
             variant.setAttributes(request.getAttributes());
             variant.setPrice(request.getPrice());
             variant.setStock(request.getStock() != null ? request.getStock() : 0);
             variant.setSku(request.getSku());
-            product.getVariants().add(variant);
         }
 
         recalculateProductStock(product);
@@ -263,6 +341,9 @@ public class ProductServiceImpl implements ProductService {
     private void validateVariantCanBeRemoved(Long variantId) {
         if (cartItemRepository.existsByVariantId(variantId)) {
             throw new BusinessException("Khong the xoa bien the dang duoc su dung trong gio hang");
+        }
+        if (orderItemRepository.existsByVariantId(variantId)) {
+            throw new BusinessException("Khong the xoa bien the da tung duoc dat hang");
         }
     }
 
@@ -288,13 +369,17 @@ public class ProductServiceImpl implements ProductService {
         response.setCreatedAt(product.getCreatedAt());
 
         // Tìm thông tin Flash Sale từ bảng mới
-        flashSaleProductRepository.findActiveByProductId(product.getId()).ifPresent(fsp -> {
-            response.setFlashSaleActive(true);
-            response.setFlashSalePrice(fsp.getFlashSalePrice());
-            response.setFlashSaleStartAt(fsp.getFlashSale().getStartTime());
-            response.setFlashSaleEndAt(fsp.getFlashSale().getEndTime());
-            response.setEffectivePrice(fsp.getFlashSalePrice());
-        });
+        List<FlashSaleProduct> activeFlashSales = flashSaleProductRepository.findActiveByProductId(product.getId());
+        if (!activeFlashSales.isEmpty()) {
+            FlashSaleProduct fsp = activeFlashSales.get(0);
+            if (fsp.getFlashSale() != null) {
+                response.setFlashSaleActive(true);
+                response.setFlashSalePrice(fsp.getFlashSalePrice());
+                response.setFlashSaleStartAt(fsp.getFlashSale().getStartTime());
+                response.setFlashSaleEndAt(fsp.getFlashSale().getEndTime());
+                response.setEffectivePrice(fsp.getFlashSalePrice());
+            }
+        }
 
         if (response.getEffectivePrice() == null) {
             response.setEffectivePrice(product.getBasePrice());

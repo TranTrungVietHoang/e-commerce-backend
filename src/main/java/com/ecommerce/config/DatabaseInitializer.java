@@ -55,7 +55,7 @@ public class DatabaseInitializer implements CommandLineRunner {
 
     private void initializeAdminUser() {
         String adminEmail = "admin@admin.com";
-        if (userRepository.findByEmail(adminEmail).isEmpty()) {
+        if (userRepository.findFirstByEmail(adminEmail).isEmpty()) {
             Role adminRole = roleRepository.findByName("ROLE_ADMIN")
                     .orElseThrow(() -> new RuntimeException("Error: Role ADMIN is not found."));
 
@@ -74,7 +74,7 @@ public class DatabaseInitializer implements CommandLineRunner {
 
     private void initializeSellerUser() {
         String sellerEmail = "seller@gmail.com";
-        if (userRepository.findByEmail(sellerEmail).isEmpty()) {
+        if (userRepository.findFirstByEmail(sellerEmail).isEmpty()) {
             Role sellerRole = roleRepository.findByName("ROLE_SELLER")
                     .orElseThrow(() -> new RuntimeException("Error: Role SELLER is not found."));
 
@@ -90,7 +90,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             log.info("Đã tạo tài khoản Seller mặc định: {} / seller123", sellerEmail);
 
             // Tạo Shop mặc định cho seller này
-            if (shopRepository.findBySellerId(seller.getId()).isEmpty()) {
+            if (shopRepository.findFirstBySellerId(seller.getId()).isEmpty()) {
                 Shop shop = Shop.builder()
                         .seller(seller)
                         .name("Cửa hàng MacDinh")

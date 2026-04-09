@@ -1,5 +1,6 @@
 package com.ecommerce.controller.admin;
 
+import com.ecommerce.dto.response.ApiResponse;
 import com.ecommerce.entity.FlashSale;
 import com.ecommerce.service.FlashSaleService;
 import lombok.Data;
@@ -20,13 +21,13 @@ public class FlashSaleAdminController {
     private final FlashSaleService flashSaleService;
 
     @PostMapping
-    public ResponseEntity<FlashSale> create(@RequestBody FlashSaleRequest request) {
-        return ResponseEntity.ok(flashSaleService.createFlashSale(request.getName(), request.getStartTime(), request.getEndTime()));
+    public ResponseEntity<ApiResponse<FlashSale>> create(@RequestBody FlashSaleRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(flashSaleService.createFlashSale(request.getName(), request.getStartTime(), request.getEndTime())));
     }
 
     @GetMapping
-    public ResponseEntity<List<FlashSale>> getAll() {
-        return ResponseEntity.ok(flashSaleService.getAllFlashSales());
+    public ResponseEntity<ApiResponse<List<FlashSale>>> getAll() {
+        return ResponseEntity.ok(ApiResponse.success(flashSaleService.getAllFlashSales()));
     }
 
     @PatchMapping("/{id}/status")

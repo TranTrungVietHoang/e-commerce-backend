@@ -23,4 +23,5 @@ public interface ProductService {
     // Moderation
     Page<ProductResponse> getPendingProducts(int page, int size);
     void moderateProduct(Long id, String status);
+    void updateProductStatusBySeller(Long id, Long shopId, String status);
 }

@@ -19,10 +19,10 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     List<Shop> findByStatus(ShopStatus status);
 
     // 2. Tìm shop theo đối tượng User (Seller) 
-    Optional<Shop> findBySeller(User seller);
+    Optional<Shop> findFirstBySeller(User seller);
 
     // 3. Tìm shop nhanh bằng ID của người bán (Seller ID)
-    Optional<Shop> findBySellerId(Long sellerId);
+    Optional<Shop> findFirstBySellerId(Long sellerId);
 
     // 4. Kiểm tra tên shop đã tồn tại chưa (Để tránh trùng lặp khi đăng ký)
     boolean existsByName(String name);

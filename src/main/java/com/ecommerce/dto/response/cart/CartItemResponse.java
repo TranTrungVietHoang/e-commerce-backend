@@ -23,4 +23,6 @@ public class CartItemResponse {
     private BigDecimal flashSalePrice;
     private Boolean flashSaleActive;
     private LocalDateTime flashSaleEndAt;
+    private Boolean active; // True if product is ACTIVE
+    private Boolean isStockSufficient; // True if quantity <= availableStock
 }

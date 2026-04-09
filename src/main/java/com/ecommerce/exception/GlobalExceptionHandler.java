@@ -68,6 +68,34 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Bắt lỗi nghiệp vụ chung (BusinessException)
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException ex) {
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(HttpStatus.BAD_REQUEST.value())
+                .message(ex.getMessage()) // Trả về text chi tiết (VD: "Số lượng yêu cầu vượt quá tồn kho")
+                .result(null)
+                .build();
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * Bắt lỗi không tìm thấy tài nguyên (ResourceNotFoundException)
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResourceNotFoundException(ResourceNotFoundException ex) {
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(HttpStatus.NOT_FOUND.value())
+                .message(ex.getMessage())
+                .result(null)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+    }
+
+    /**
      * Bắt lỗi quyền truy cập (403 Forbidden).
      */
     @ExceptionHandler(AccessDeniedException.class)

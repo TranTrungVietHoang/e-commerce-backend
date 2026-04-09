@@ -5,6 +5,7 @@ import com.ecommerce.dto.request.voucher.CreateVoucherRequest;
 import com.ecommerce.dto.response.voucher.VoucherApplyResponse;
 import com.ecommerce.dto.response.voucher.VoucherResponse;
 import com.ecommerce.entity.Shop;
+import com.ecommerce.enums.ShopStatus;
 import com.ecommerce.entity.User;
 import com.ecommerce.entity.Voucher;
 import com.ecommerce.entity.VoucherUsage;
@@ -28,6 +29,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class VoucherServiceImpl implements VoucherService {
 
     private final VoucherRepository voucherRepository;
@@ -88,6 +90,13 @@ public class VoucherServiceImpl implements VoucherService {
     @Override
     @Transactional
     public VoucherResponse createVoucher(Long shopId, CreateVoucherRequest request) {
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop", shopId));
+        
+        if (shop.getStatus() != ShopStatus.APPROVED) {
+            throw new BusinessException("Gian hàng c?a b?n dang b? khoá. Không th? t?o voucher.");
+        }
+        
         validateVoucherRequest(request, null);
         Voucher voucher = new Voucher();
         fillVoucher(voucher, shopId, request);
@@ -99,6 +108,11 @@ public class VoucherServiceImpl implements VoucherService {
     public VoucherResponse updateVoucher(Long voucherId, Long shopId, CreateVoucherRequest request) {
         Voucher voucher = voucherRepository.findById(voucherId)
                 .orElseThrow(() -> new ResourceNotFoundException("Voucher", voucherId));
+        
+        if (voucher.getShop() != null && voucher.getShop().getStatus() != ShopStatus.APPROVED) {
+            throw new BusinessException("Gian hàng c?a b?n dang b? khoá ho?c chua duy?t. Không th? c?p nh?t voucher.");
+        }
+
         if (voucher.getShop() == null || !voucher.getShop().getId().equals(shopId)) {
             throw new BusinessException("Khong co quyen sua voucher nay");
         }
@@ -118,17 +132,51 @@ public class VoucherServiceImpl implements VoucherService {
         voucherRepository.delete(voucher);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<VoucherResponse> getAllVouchers() {
+        log.info("Admin l?y t?t c? voucher h? th?ng");
+        return voucherRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     private Voucher getVoucherByCode(String code) {
         return voucherRepository.findByCodeIgnoreCase(code.trim())
                 .orElseThrow(() -> new BusinessException("Voucher khong ton tai"));
     }
 
     private VoucherApplyResponse calculateVoucher(User user, Voucher voucher, BigDecimal orderValue, boolean checkUsage) {
-        if (!isVoucherAvailable(voucher, orderValue)) {
-            throw new BusinessException("Voucher khong thoa dieu kien ap dung");
+        LocalDateTime now = LocalDateTime.now();
+        
+        log.info("Checking voucher {}: now={}, startAt={}, endAt={}, orderValue={}", 
+            voucher.getCode(), now, voucher.getStartAt(), voucher.getEndAt(), orderValue);
+
+        // Kiểm tra Active
+        if (!Boolean.TRUE.equals(voucher.getActive())) {
+            throw new BusinessException("Voucher này đã bị khóa hoặc ngừng kích hoạt");
         }
+        
+        // Kiểm tra thời hạn (với 5 phút ân hạn cho thời gian bắt đầu)
+        if (voucher.getStartAt() != null && now.isBefore(voucher.getStartAt().minusMinutes(5))) {
+            throw new BusinessException("Voucher chưa đến thời điểm áp dụng (Bắt đầu lúc: " + voucher.getStartAt() + ")");
+        }
+        if (voucher.getEndAt() != null && now.isAfter(voucher.getEndAt())) {
+            throw new BusinessException("Voucher đã hết hạn sử dụng (Kết thúc lúc: " + voucher.getEndAt() + ")");
+        }
+        
+        // Kiểm tra lượt dùng
+        if (voucher.getUsageLimit() != null && voucher.getUsedCount() >= voucher.getUsageLimit()) {
+            throw new BusinessException("Voucher này đã hết lượt sử dụng");
+        }
+        
+        // Kiểm tra giá trị đơn tối thiểu
+        if (voucher.getMinOrderValue() != null && orderValue.compareTo(voucher.getMinOrderValue()) < 0) {
+            throw new BusinessException("Đơn hàng chưa đạt giá trị tối thiểu " + voucher.getMinOrderValue() + "đ");
+        }
+
         if (checkUsage && voucherUsageRepository.existsByVoucherIdAndUserId(voucher.getId(), user.getId())) {
-            throw new BusinessException("Voucher nay da duoc ban su dung");
+            throw new BusinessException("Voucher này đã được bạn sử dụng");
         }
 
         BigDecimal discountAmount = "PERCENT".equalsIgnoreCase(voucher.getDiscountType())
@@ -143,6 +191,7 @@ public class VoucherServiceImpl implements VoucherService {
         }
 
         VoucherApplyResponse response = new VoucherApplyResponse();
+        response.setId(voucher.getId());
         response.setCode(voucher.getCode());
         response.setDiscountType(voucher.getDiscountType());
         response.setDiscountValue(voucher.getDiscountValue());

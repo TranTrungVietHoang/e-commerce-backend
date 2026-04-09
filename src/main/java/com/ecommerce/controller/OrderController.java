@@ -42,11 +42,11 @@ public class OrderController {
             return;
         }
         Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        Long sellerShopId = shopRepository.findBySellerId(userId)
+        Long sellerShopId = shopRepository.findFirstBySellerId(userId)
                 .orElseThrow(() -> new BusinessException("B?n chua m? shop"))
                 .getId();
         if (!sellerShopId.equals(requestedShopId)) {
-            throw new BusinessException("KhÙng cÛ quy?n thao t·c trÍn don h‡ng shop n‡y");
+            throw new BusinessException("Kh√¥ng c√≥ quy?n thao t√°c tr√™n don h√†ng shop n√†y");
         }
     }
 
@@ -55,10 +55,10 @@ public class OrderController {
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestBody CreateOrderRequest request) {
         Long customerId = userService.getUserIdByUsername(userDetails.getUsername());
-        log.info("T?o don h‡ng: customerId={}, shopId={}", customerId, request.getShopId());
+        log.info("T?o don h√†ng: customerId={}, shopId={}", customerId, request.getShopId());
         
         OrderDetailResponse response = orderService.createOrder(request, customerId);
-        return new ResponseEntity<>(ApiResponse.success(response, "T?o don h‡ng th‡nh cÙng"), HttpStatus.CREATED);
+        return new ResponseEntity<>(ApiResponse.success(response, "T?o don h√†ng th√†nh c√¥ng"), HttpStatus.CREATED);
     }
 
     @GetMapping("/{orderId}")
@@ -102,7 +102,7 @@ public class OrderController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         verifyShopOwnership(shopId, userDetails);
-        log.info("L?y danh s·ch don c?a shop: shopId={}", shopId);
+        log.info("L?y danh s√°ch don c?a shop: shopId={}", shopId);
         
         Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
         Page<OrderListResponse> orderPage = orderService.getShopOrders(shopId, pageable);
@@ -116,10 +116,10 @@ public class OrderController {
             @PathVariable Long orderId,
             @RequestBody UpdateOrderStatusRequest request) {
         Long sellerId = userService.getUserIdByUsername(userDetails.getUsername());
-        log.info("C?p nh?t tr?ng th·i don: orderId={}, sellerId={}, status={}", orderId, sellerId, request.getStatus());
+        log.info("C?p nh?t tr?ng th√°i don: orderId={}, sellerId={}, status={}", orderId, sellerId, request.getStatus());
         
         OrderDetailResponse response = orderService.updateOrderStatus(orderId, request.getStatus(), sellerId);
-        return new ResponseEntity<>(ApiResponse.success(response, "C?p nh?t tr?ng th·i th‡nh cÙng"), HttpStatus.OK);
+        return new ResponseEntity<>(ApiResponse.success(response, "C?p nh?t tr?ng th√°i th√†nh c√¥ng"), HttpStatus.OK);
     }
 
     @PutMapping("/shop/{shopId}/{orderId}/cancel")
@@ -129,10 +129,10 @@ public class OrderController {
             @PathVariable Long shopId,
             @PathVariable Long orderId) {
         verifyShopOwnership(shopId, userDetails);
-        log.info("H?y don h‡ng shop: orderId={}, shopId={}", orderId, shopId);
+        log.info("H?y don h√†ng shop: orderId={}, shopId={}", orderId, shopId);
         
         OrderDetailResponse response = orderService.cancelShopOrder(orderId, shopId);
-        return new ResponseEntity<>(ApiResponse.success(response, "H?y don h‡ng th‡nh cÙng"), HttpStatus.OK);
+        return new ResponseEntity<>(ApiResponse.success(response, "H?y don h√†ng th√†nh c√¥ng"), HttpStatus.OK);
     }
 
     @DeleteMapping("/{orderId}")
@@ -140,10 +140,10 @@ public class OrderController {
             @AuthenticationPrincipal UserDetails userDetails,
             @PathVariable Long orderId) {
         Long customerId = userService.getUserIdByUsername(userDetails.getUsername());
-        log.info("H?y don h‡ng: orderId={}, customerId={}", orderId, customerId);
+        log.info("H?y don h√†ng: orderId={}, customerId={}", orderId, customerId);
         
         OrderDetailResponse response = orderService.cancelOrder(orderId, customerId);
-        return new ResponseEntity<>(ApiResponse.success(response, "H?y don h‡ng th‡nh cÙng"), HttpStatus.OK);
+        return new ResponseEntity<>(ApiResponse.success(response, "H?y don h√†ng th√†nh c√¥ng"), HttpStatus.OK);
     }
 
     @GetMapping("/{orderId}/status-history")

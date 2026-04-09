@@ -30,10 +30,10 @@ public class FlashSaleSellerController {
     public ResponseEntity<FlashSaleProduct> register(
             Authentication authentication,
             @RequestBody RegisterFlashSaleRequest request) {
-        User seller = userRepository.findByEmail(authentication.getName())
+        User seller = userRepository.findFirstByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("Seller not found"));
-        
-        Shop shop = shopRepository.findBySellerId(seller.getId())
+
+        Shop shop = shopRepository.findFirstBySellerId(seller.getId())
                 .orElseThrow(() -> new RuntimeException("Shop not found for this seller"));
 
         return ResponseEntity.ok(flashSaleProductService.registerProduct(
@@ -41,16 +41,15 @@ public class FlashSaleSellerController {
                 request.getProductId(),
                 request.getFlashSalePrice(),
                 request.getSlots(),
-                shop.getId()
-        ));
+                shop.getId()));
     }
 
     @GetMapping("/my-products")
     public ResponseEntity<List<FlashSaleProduct>> getMyProducts(Authentication authentication) {
-        User seller = userRepository.findByEmail(authentication.getName())
+        User seller = userRepository.findFirstByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("Seller not found"));
-        
-        Shop shop = shopRepository.findBySellerId(seller.getId())
+
+        Shop shop = shopRepository.findFirstBySellerId(seller.getId())
                 .orElseThrow(() -> new RuntimeException("Shop not found for this seller"));
 
         return ResponseEntity.ok(flashSaleProductService.getProductsByShop(shop.getId()));
@@ -58,10 +57,10 @@ public class FlashSaleSellerController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> unregister(Authentication authentication, @PathVariable Long id) {
-        User seller = userRepository.findByEmail(authentication.getName())
+        User seller = userRepository.findFirstByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("Seller not found"));
-        
-        Shop shop = shopRepository.findBySellerId(seller.getId())
+
+        Shop shop = shopRepository.findFirstBySellerId(seller.getId())
                 .orElseThrow(() -> new RuntimeException("Shop not found for this seller"));
 
         flashSaleProductService.unregisterProduct(id, shop.getId());

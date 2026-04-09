@@ -1,6 +1,7 @@
 package com.ecommerce.repository;
 
 import com.ecommerce.entity.Product;
+import com.ecommerce.enums.ShopStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
@@ -61,5 +62,10 @@ public class ProductSpecification {
     /** Chỉ lấy sản phẩm đã được duyệt nội dung */
     public static Specification<Product> isApproved() {
         return (root, query, cb) -> cb.equal(root.get("moderationStatus"), "APPROVED");
+    }
+
+    /** Chỉ lấy sản phẩm của gian hàng đã được duyệt (không bị khóa) */
+    public static Specification<Product> isShopApproved() {
+        return (root, query, cb) -> cb.equal(root.get("shop").get("status"), ShopStatus.APPROVED);
     }
 }

@@ -33,7 +33,7 @@ public class RevenueController {
             return;
         }
         Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        Long sellerShopId = shopRepository.findBySellerId(userId)
+        Long sellerShopId = shopRepository.findFirstBySellerId(userId)
                 .orElseThrow(() -> new BusinessException("Bạn chưa mở shop"))
                 .getId();
         if (!sellerShopId.equals(requestedShopId)) {

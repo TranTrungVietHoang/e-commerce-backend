@@ -41,7 +41,7 @@ public class OtpService {
     @Transactional
     public void generateAndSendOtp(String email) {
         // Tìm user, không ném ngoại lệ để tránh lộ lọt tài khoản (Anti-enumeration)
-        User user = userRepository.findByEmail(email).orElse(null);
+        User user = userRepository.findFirstByEmail(email).orElse(null);
         if (user == null) {
             log.warn("Yêu cầu OTP cho email không tồn tại: {}", email);
             return; 
@@ -103,7 +103,7 @@ public class OtpService {
 
     @Transactional
     public void verifyAndResetPassword(String email, String otp, String newPassword) {
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findFirstByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         VerificationToken token = verificationTokenRepository

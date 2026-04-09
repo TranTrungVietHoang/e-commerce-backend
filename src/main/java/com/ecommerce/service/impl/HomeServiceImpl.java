@@ -3,6 +3,7 @@ package com.ecommerce.service.impl;
 import com.ecommerce.dto.response.BannerResponse;
 import com.ecommerce.dto.response.HomeResponse;
 import com.ecommerce.dto.response.product.ProductResponse;
+import com.ecommerce.entity.FlashSaleProduct;
 import com.ecommerce.entity.Product;
 import com.ecommerce.entity.ProductImage;
 import com.ecommerce.repository.ProductRepository;
@@ -61,13 +62,17 @@ public class HomeServiceImpl implements HomeService {
         res.setPrimaryImageUrl(resolvePrimaryImage(product));
 
         // Tìm thông tin Flash Sale
-        flashSaleProductRepository.findActiveByProductId(product.getId()).ifPresent(fsp -> {
+        List<FlashSaleProduct> activeFlashSales = flashSaleProductRepository.findActiveByProductId(product.getId());
+        if (!activeFlashSales.isEmpty()) {
+            FlashSaleProduct fsp = activeFlashSales.get(0);
             res.setFlashSaleActive(true);
             res.setFlashSalePrice(fsp.getFlashSalePrice());
-            res.setFlashSaleStartAt(fsp.getFlashSale().getStartTime());
-            res.setFlashSaleEndAt(fsp.getFlashSale().getEndTime());
+            if (fsp.getFlashSale() != null) {
+                res.setFlashSaleStartAt(fsp.getFlashSale().getStartTime());
+                res.setFlashSaleEndAt(fsp.getFlashSale().getEndTime());
+            }
             res.setEffectivePrice(fsp.getFlashSalePrice());
-        });
+        }
 
         if (res.getEffectivePrice() == null) {
             res.setEffectivePrice(product.getBasePrice());

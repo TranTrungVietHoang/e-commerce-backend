@@ -40,7 +40,7 @@ public class VoucherController {
 
     private Long getShopIdFromUser(UserDetails userDetails) {
         Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        return shopRepository.findBySellerId(userId)
+        return shopRepository.findFirstBySellerId(userId)
                 .orElseThrow(() -> new BusinessException("Bạn chưa mở shop hoặc shop không tồn tại"))
                 .getId();
     }

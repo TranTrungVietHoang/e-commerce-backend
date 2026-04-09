@@ -16,7 +16,7 @@ import java.util.List;
 @Data
 public class CreateProductRequest {
     @NotBlank(message = "Ten san pham khong duoc de trong")
-    @Size(min = 10, max = 200, message = "Ten san pham phai tu 10-200 ky tu")
+    @Size(min = 3, max = 200, message = "Ten san pham phai tu 3-200 ky tu")
     private String name;
 
     @NotNull(message = "Vui long chon danh muc")
@@ -35,9 +35,7 @@ public class CreateProductRequest {
     @NotEmpty(message = "Moi san pham can it nhat 1 hinh anh")
     private List<String> imageUrls;
 
-    @NotNull(message = "Vui long nhap so luong ton kho")
-    @DecimalMin(value = "0", inclusive = true, message = "So luong ton kho khong duoc am")
-    private Long stockQuantity;
+    private Integer stockQuantity;
 
     @Valid
     private List<CreateVariantRequest> variants;

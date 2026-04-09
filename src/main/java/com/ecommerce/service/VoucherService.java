@@ -16,4 +16,9 @@ public interface VoucherService {
     VoucherResponse createVoucher(Long shopId, CreateVoucherRequest request);
     VoucherResponse updateVoucher(Long voucherId, Long shopId, CreateVoucherRequest request);
     void deleteVoucher(Long voucherId, Long shopId);
+
+    /**
+     * Lấy tất cả voucher hệ thống (cho Admin)
+     */
+    List<VoucherResponse> getAllVouchers();
 }

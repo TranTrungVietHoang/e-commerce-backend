@@ -50,6 +50,7 @@ public class SecurityConfig {
                         // PUBLIC ENDPOINTS
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/flash-sales", "/api/v1/flash-sales/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/shops/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/home/**").permitAll()
@@ -61,8 +62,10 @@ public class SecurityConfig {
 
                         // ADMIN ONLY
                         .requestMatchers("/api/v1/admin/**", "/api/admin/**").hasRole("ADMIN")
-                        
-                        // SELLER ONLY
+
+                        // SELLER ONLY (open shop registration & my-shop for all authenticated users)
+                        .requestMatchers("/api/v1/seller/shops/register").authenticated()
+                        .requestMatchers("/api/v1/seller/shops/me").authenticated()
                         .requestMatchers("/api/v1/seller/**", "/api/seller/**").hasAnyRole("SELLER", "ADMIN")
 
                         // OTHERS

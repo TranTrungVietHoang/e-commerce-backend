@@ -21,7 +21,7 @@ public class ProductVariant {
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
-    @Column(unique = true, length = 100)
+    @Column(length = 100)
     private String sku;
 
     @Column(columnDefinition = "NVARCHAR(MAX)")

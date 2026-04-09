@@ -38,13 +38,13 @@ public class ProductController {
 
     private Long getShopIdFromUser(UserDetails userDetails) {
         Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        return shopRepository.findBySellerId(userId)
+        return shopRepository.findFirstBySellerId(userId)
                 .orElseThrow(() -> new BusinessException("Bạn chưa mở shop hoặc shop không tồn tại"))
                 .getId();
     }
 
     @PostMapping("/upload")
-    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'SELLER', 'ADMIN')")
     public ResponseEntity<ApiResponse<?>> uploadImage(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
         try {
             String url = fileService.uploadFile(file);
@@ -96,6 +96,17 @@ public class ProductController {
         Long shopId = getShopIdFromUser(userDetails);
         ProductDetailResponse response = productService.updateProduct(id, request, shopId);
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PutMapping("/seller/{id}/status")
+    @PreAuthorize("hasAnyRole('SELLER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> updateProductStatusForSeller(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam String status) {
+        Long shopId = getShopIdFromUser(userDetails);
+        productService.updateProductStatusBySeller(id, shopId, status);
+        return ResponseEntity.ok(ApiResponse.success(null));
     }
 
     @DeleteMapping("/{id}")

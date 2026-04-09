@@ -1,4 +1,6 @@
 package com.ecommerce.service.impl;
+import com.ecommerce.entity.Role;
+import com.ecommerce.repository.RoleRepository;
 
 import com.ecommerce.dto.request.shop.ShopRegistrationRequest;
 import com.ecommerce.dto.request.shop.ShopUpdateRequest;
@@ -27,10 +29,11 @@ public class ShopServiceImpl implements ShopService {
 
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
     @Override
     public ShopResponse getShopBySellerId(Long sellerId) {
-        Shop shop = shopRepository.findBySellerId(sellerId)
+        Shop shop = shopRepository.findFirstBySellerId(sellerId)
                 .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
         return mapToResponse(shop);
     }
@@ -80,13 +83,14 @@ public class ShopServiceImpl implements ShopService {
                 .build();
 
         shop = shopRepository.save(shop);
+        // Không nâng cấp role ngay - phải chờ Admin duyệt
         return mapToResponse(shop);
     }
 
     @Override
     @Transactional
     public ShopResponse updateShopInfo(Long sellerId, ShopUpdateRequest request) {
-        Shop existing = shopRepository.findBySellerId(sellerId)
+        Shop existing = shopRepository.findFirstBySellerId(sellerId)
                 .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
 
         if (request.getName() != null && !request.getName().equals(existing.getName())) {
@@ -134,6 +138,23 @@ public class ShopServiceImpl implements ShopService {
                 .orElseThrow(() -> new AppException(ErrorCode.SHOP_NOT_FOUND));
         shop.setStatus(status);
         shopRepository.save(shop);
+
+        User seller = shop.getSeller();
+
+        if (status == ShopStatus.APPROVED) {
+            // Duyệt: Cấp quyền SELLER cho user
+            Role sellerRole = roleRepository.findByName("ROLE_SELLER")
+                    .orElseThrow(() -> new RuntimeException("Error: Role SELLER is not found."));
+            seller.getRoles().add(sellerRole);
+            userRepository.save(seller);
+        } else if (status == ShopStatus.REJECTED) {
+            // Từ chối: Thu hồi quyền SELLER nếu có
+            Role sellerRole = roleRepository.findByName("ROLE_SELLER").orElse(null);
+            if (sellerRole != null) {
+                seller.getRoles().remove(sellerRole);
+                userRepository.save(seller);
+            }
+        }
     }
 
     private ShopResponse mapToResponse(Shop shop) {

@@ -21,4 +21,6 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
            "AND oi.product.id = :productId " +
            "AND oi.order.status = 'DELIVERED'")
     List<OrderItem> findDeliveredItemByUserAndProduct(@Param("userId") Long userId, @Param("productId") Long productId);
+
+    boolean existsByVariantId(Long variantId);
 }

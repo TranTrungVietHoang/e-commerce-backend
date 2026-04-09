@@ -20,7 +20,7 @@ public class FlashSale {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "NVARCHAR(255)")
     private String name; // e.g., "Săn Deal Cuối Tuần"
 
     @Column(name = "start_time", nullable = false)
@@ -38,6 +38,7 @@ public class FlashSale {
 
     @Builder.Default
     @OneToMany(mappedBy = "flashSale", cascade = CascadeType.ALL, orphanRemoval = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<FlashSaleProduct> products = new ArrayList<>();
 
     @PrePersist

@@ -19,13 +19,16 @@ import com.ecommerce.repository.ProductVariantRepository;
 import com.ecommerce.repository.UserRepository;
 import com.ecommerce.repository.FlashSaleProductRepository;
 import com.ecommerce.entity.FlashSaleProduct;
+import com.ecommerce.enums.ShopStatus;
 import com.ecommerce.service.CartService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -41,7 +44,7 @@ public class CartServiceImpl implements CartService {
     private final FlashSaleProductRepository flashSaleProductRepository;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public CartResponse getCart(Long userId) {
         return toCartResponse(getOrCreateCart(userId));
     }
@@ -50,11 +53,25 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public CartResponse addToCart(Long userId, AddToCartRequest request) {
         Cart cart = getOrCreateCart(userId);
-        Product product = productRepository.findById(request.getProductId())
+        Product product = productRepository.findByIdForUpdate(request.getProductId())
                 .orElseThrow(() -> new ResourceNotFoundException("Product", request.getProductId()));
 
+        if (product.getShop().getStatus() != ShopStatus.APPROVED) {
+            throw new BusinessException("Gian hàng c?a s?n ph?m này dang b? khoá ho?c chua duy?t.");
+        }
+
         validateProductCanBePurchased(product);
-        ProductVariant variant = resolveVariant(product, request.getVariantId());
+
+        ProductVariant variant = null;
+        if (request.getVariantId() != null) {
+            variant = productVariantRepository.findByIdForUpdate(request.getVariantId())
+                    .orElseThrow(() -> new ResourceNotFoundException("ProductVariant", request.getVariantId()));
+            
+            if (!variant.getProduct().getId().equals(product.getId())) {
+                throw new BusinessException("Bien the khong thuoc san pham da chon");
+            }
+        }
+
         int availableStock = getAvailableStock(product, variant);
 
         Optional<CartItem> existingItem = request.getVariantId() != null
@@ -142,7 +159,10 @@ public class CartServiceImpl implements CartService {
 
     private void validateProductCanBePurchased(Product product) {
         if (!"ACTIVE".equalsIgnoreCase(product.getStatus())) {
-            throw new BusinessException("San pham hien khong kha dung");
+            throw new BusinessException("Sản phẩm hiện không khả dụng");
+        }
+        if (!"APPROVED".equalsIgnoreCase(product.getModerationStatus())) {
+            throw new BusinessException("Sản phẩm này chưa được phê duyệt nên chưa thể mua hàng.");
         }
     }
 
@@ -162,9 +182,9 @@ public class CartServiceImpl implements CartService {
     private BigDecimal resolveCurrentUnitPrice(Product product, ProductVariant variant) {
         BigDecimal baseVariantPrice = variant != null ? variant.getPrice() : product.getBasePrice();
         
-        Optional<FlashSaleProduct> fspOpt = flashSaleProductRepository.findActiveByProductId(product.getId());
-        if (fspOpt.isPresent()) {
-            return fspOpt.get().getFlashSalePrice().min(baseVariantPrice);
+        List<FlashSaleProduct> activeFlashSales = flashSaleProductRepository.findActiveByProductId(product.getId());
+        if (!activeFlashSales.isEmpty()) {
+            return activeFlashSales.get(0).getFlashSalePrice().min(baseVariantPrice);
         }
         
         return baseVariantPrice;
@@ -180,7 +200,7 @@ public class CartServiceImpl implements CartService {
                 .collect(Collectors.toList());
 
         response.setItems(sortedItems.stream().map(item -> {
-            validateProductCanBePurchased(item.getProduct());
+            boolean isActive = "ACTIVE".equalsIgnoreCase(item.getProduct().getStatus());
 
             BigDecimal currentUnitPrice = resolveCurrentUnitPrice(item.getProduct(), item.getVariant());
             if (item.getUnitPrice() == null || item.getUnitPrice().compareTo(currentUnitPrice) != 0) {
@@ -207,12 +227,19 @@ public class CartServiceImpl implements CartService {
             itemResponse.setLineTotal(currentUnitPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
             itemResponse.setBasePrice(item.getVariant() != null ? item.getVariant().getPrice() : item.getProduct().getBasePrice());
             
+            itemResponse.setActive(isActive);
+            itemResponse.setIsStockSufficient(item.getQuantity() <= (itemResponse.getAvailableStock() != null ? itemResponse.getAvailableStock() : 0));
+
             // Cập nhật thông tin Flash Sale từ bảng mới
-            flashSaleProductRepository.findActiveByProductId(item.getProduct().getId()).ifPresent(fsp -> {
+            List<FlashSaleProduct> activeFlashSales = flashSaleProductRepository.findActiveByProductId(item.getProduct().getId());
+            if (!activeFlashSales.isEmpty()) {
+                FlashSaleProduct fsp = activeFlashSales.get(0);
                 itemResponse.setFlashSaleActive(true);
                 itemResponse.setFlashSalePrice(fsp.getFlashSalePrice());
-                itemResponse.setFlashSaleEndAt(fsp.getFlashSale().getEndTime());
-            });
+                if (fsp.getFlashSale() != null) {
+                    itemResponse.setFlashSaleEndAt(fsp.getFlashSale().getEndTime());
+                }
+            }
 
             if (itemResponse.getFlashSaleActive() == null) {
                 itemResponse.setFlashSaleActive(false);

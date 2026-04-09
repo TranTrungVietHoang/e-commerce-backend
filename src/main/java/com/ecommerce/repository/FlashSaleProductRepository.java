@@ -14,7 +14,7 @@ public interface FlashSaleProductRepository extends JpaRepository<FlashSaleProdu
     @Query("SELECT fsp FROM FlashSaleProduct fsp " +
            "JOIN fsp.flashSale fs " +
            "WHERE fs.status = 'ACTIVE' AND fsp.product.id = :productId")
-    Optional<FlashSaleProduct> findActiveByProductId(Long productId);
+    List<FlashSaleProduct> findActiveByProductId(Long productId);
 
     @Query("SELECT fsp FROM FlashSaleProduct fsp " +
            "JOIN FETCH fsp.product p " +

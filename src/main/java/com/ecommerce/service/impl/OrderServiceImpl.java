@@ -56,36 +56,58 @@ public class OrderServiceImpl implements OrderService {
         Cart cart = cartRepository.findByUserId(customerId)
                 .orElseThrow(() -> new BusinessException("Giỏ hàng trống"));
 
-        List<CartItem> cartItems = cart.getItems();
+        // Chỉ lấy items thuộc shop đang đặt hàng
+        List<CartItem> cartItems = cart.getItems().stream()
+                .filter(item -> item.getProduct().getShop().getId().equals(request.getShopId()))
+                .collect(Collectors.toList());
+
         if (cartItems == null || cartItems.isEmpty()) {
-            throw new BusinessException("Giỏ hàng không có sản phẩm");
+            throw new BusinessException("Giỏ hàng không có sản phẩm từ shop này");
         }
 
-        // Kiểm tra stock và tính toán subtotal
+        // Kiểm tra stock và quyết định dùng Pessimistic Lock để tránh đua tranh
         BigDecimal subtotal = BigDecimal.ZERO;
         for (CartItem cartItem : cartItems) {
-            Product product = cartItem.getProduct();
+            // Lấy ra bản nghi Product có khóa (PESSIMISTIC_WRITE)
+            Product product = productRepository.findByIdForUpdate(cartItem.getProduct().getId())
+                    .orElseThrow(() -> new BusinessException("Sản phẩm không có sẵn: " + cartItem.getProduct().getName()));
             
+            // Cập nhật lại reference
+            cartItem.setProduct(product);
+
+            if (!"ACTIVE".equalsIgnoreCase(product.getStatus())) {
+                throw new BusinessException("Sản phẩm hiện không còn kinh doanh: " + product.getName());
+            }
+
             if (cartItem.getVariant() != null) {
-                // Nếu có variant, check stock variant
-                if (cartItem.getVariant().getStock() < cartItem.getQuantity()) {
-                    throw new BusinessException("Sản phẩm " + product.getName() + " (variant) không đủ hàng");
+                // Lấy ra bản ghi Variant có khóa
+                ProductVariant variant = productVariantRepository.findByIdForUpdate(cartItem.getVariant().getId())
+                        .orElseThrow(() -> new BusinessException("Phân loại sản phẩm không có sẵn"));
+                
+                // Cập nhật lại reference
+                cartItem.setVariant(variant);
+
+                // Nếu có variant, check stock variant an toàn
+                if (variant.getStock() < cartItem.getQuantity()) {
+                    throw new BusinessException("Sản phẩm " + product.getName() + " không đủ hàng");
                 }
             } else {
-                // Không variant, check tồn kho product
+                // Không variant, check tồn kho product an toàn
                 if (product.getStockQuantity() < cartItem.getQuantity()) {
                     throw new BusinessException("Sản phẩm " + product.getName() + " không đủ hàng");
                 }
             }
 
             // Kiểm tra tồn kho Flash Sale nếu đang áp dụng giá sale
-            flashSaleProductRepository.findActiveByProductId(product.getId()).ifPresent(fsp -> {
+            List<FlashSaleProduct> fsps = flashSaleProductRepository.findActiveByProductId(product.getId());
+            if (!fsps.isEmpty()) {
+                FlashSaleProduct fsp = fsps.get(0);
                 if (cartItem.getUnitPrice().compareTo(fsp.getFlashSalePrice()) == 0) {
                     if (fsp.getSoldCount() + cartItem.getQuantity() > fsp.getSlots()) {
                         throw new BusinessException("Sản phẩm " + product.getName() + " đã hết lượt mua Flash Sale");
                     }
                 }
-            });
+            }
 
             BigDecimal itemTotal = cartItem.getUnitPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity()));
             subtotal = subtotal.add(itemTotal);
@@ -152,12 +174,14 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setUnitPrice(cartItem.getUnitPrice());
 
             // Cập nhật soldCount cho Flash Sale nếu có
-            flashSaleProductRepository.findActiveByProductId(product.getId()).ifPresent(fsp -> {
+            List<FlashSaleProduct> fsps = flashSaleProductRepository.findActiveByProductId(product.getId());
+            if (!fsps.isEmpty()) {
+                FlashSaleProduct fsp = fsps.get(0);
                 if (cartItem.getUnitPrice().compareTo(fsp.getFlashSalePrice()) == 0) {
                     fsp.setSoldCount(fsp.getSoldCount() + cartItem.getQuantity());
                     flashSaleProductRepository.save(fsp);
                 }
-            });
+            }
 
             orderItemRepository.save(orderItem);
             savedOrder.getItems().add(orderItem);
@@ -166,8 +190,11 @@ public class OrderServiceImpl implements OrderService {
             if (variant != null) {
                 variant.setStock(variant.getStock() - cartItem.getQuantity());
                 productVariantRepository.save(variant);
+                // Đồng bộ trừ cả số lượng tồn tổng của Product
+                product.setStockQuantity(Math.max(0, product.getStockQuantity() - cartItem.getQuantity()));
+                productRepository.save(product);
             } else {
-                product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());
+                product.setStockQuantity(Math.max(0, product.getStockQuantity() - cartItem.getQuantity()));
                 productRepository.save(product);
             }
         }
@@ -181,7 +208,9 @@ public class OrderServiceImpl implements OrderService {
         savedOrder.getStatusHistories().add(statusHistory);
 
         // Xóa items trong giỏ hàng
+        cart.getItems().removeAll(cartItems);
         cartItemRepository.deleteAll(cartItems);
+        cartRepository.save(cart);
 
         return toDetailResponse(savedOrder);
     }
@@ -239,6 +268,33 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("Không thể chuyển từ " + oldStatus + " sang " + newStatus);
         }
 
+        if ("CANCELLED".equals(newStatus)) {
+            // Hoàn lại kho
+            for (OrderItem item : order.getItems()) {
+                if (item.getVariant() != null) {
+                    item.getVariant().setStock(item.getVariant().getStock() + item.getQuantity());
+                    productVariantRepository.save(item.getVariant());
+                    // Đồng bộ hoàn lại số lượng tồn tổng của Product
+                    Product productToRefund = item.getProduct();
+                    productToRefund.setStockQuantity(productToRefund.getStockQuantity() + item.getQuantity());
+                    productRepository.save(productToRefund);
+                } else {
+                    item.getProduct().setStockQuantity(item.getProduct().getStockQuantity() + item.getQuantity());
+                    productRepository.save(item.getProduct());
+                }
+
+                // Hoàn lại soldCount cho Flash Sale nếu có
+                List<FlashSaleProduct> fsps = flashSaleProductRepository.findActiveByProductId(item.getProduct().getId());
+                if (!fsps.isEmpty()) {
+                    FlashSaleProduct fsp = fsps.get(0);
+                    if (item.getUnitPrice().compareTo(fsp.getFlashSalePrice()) == 0) {
+                        fsp.setSoldCount(Math.max(0, fsp.getSoldCount() - item.getQuantity()));
+                        flashSaleProductRepository.save(fsp);
+                    }
+                }
+            }
+        }
+
         order.setStatus(newStatus);
         Order updatedOrder = orderRepository.save(order);
 
@@ -268,18 +324,24 @@ public class OrderServiceImpl implements OrderService {
             if (item.getVariant() != null) {
                 item.getVariant().setStock(item.getVariant().getStock() + item.getQuantity());
                 productVariantRepository.save(item.getVariant());
+                // Đồng bộ hoàn lại số lượng tồn tổng của Product
+                Product productToRefund = item.getProduct();
+                productToRefund.setStockQuantity(productToRefund.getStockQuantity() + item.getQuantity());
+                productRepository.save(productToRefund);
             } else {
                 item.getProduct().setStockQuantity(item.getProduct().getStockQuantity() + item.getQuantity());
                 productRepository.save(item.getProduct());
             }
 
             // Hoàn lại soldCount cho Flash Sale nếu có
-            flashSaleProductRepository.findActiveByProductId(item.getProduct().getId()).ifPresent(fsp -> {
+            List<FlashSaleProduct> fsps = flashSaleProductRepository.findActiveByProductId(item.getProduct().getId());
+            if (!fsps.isEmpty()) {
+                FlashSaleProduct fsp = fsps.get(0);
                 if (item.getUnitPrice().compareTo(fsp.getFlashSalePrice()) == 0) {
                     fsp.setSoldCount(Math.max(0, fsp.getSoldCount() - item.getQuantity()));
                     flashSaleProductRepository.save(fsp);
                 }
-            });
+            }
         }
 
         order.setStatus("CANCELLED");
@@ -316,18 +378,24 @@ public class OrderServiceImpl implements OrderService {
             if (item.getVariant() != null) {
                 item.getVariant().setStock(item.getVariant().getStock() + item.getQuantity());
                 productVariantRepository.save(item.getVariant());
+                // Đồng bộ hoàn lại số lượng tồn tổng của Product
+                Product productToRefund = item.getProduct();
+                productToRefund.setStockQuantity(productToRefund.getStockQuantity() + item.getQuantity());
+                productRepository.save(productToRefund);
             } else {
                 item.getProduct().setStockQuantity(item.getProduct().getStockQuantity() + item.getQuantity());
                 productRepository.save(item.getProduct());
             }
 
             // Hoàn lại soldCount cho Flash Sale nếu có
-            flashSaleProductRepository.findActiveByProductId(item.getProduct().getId()).ifPresent(fsp -> {
+            List<FlashSaleProduct> fsps = flashSaleProductRepository.findActiveByProductId(item.getProduct().getId());
+            if (!fsps.isEmpty()) {
+                FlashSaleProduct fsp = fsps.get(0);
                 if (item.getUnitPrice().compareTo(fsp.getFlashSalePrice()) == 0) {
                     fsp.setSoldCount(Math.max(0, fsp.getSoldCount() - item.getQuantity()));
                     flashSaleProductRepository.save(fsp);
                 }
-            });
+            }
         }
 
         order.setStatus("CANCELLED");
@@ -369,6 +437,14 @@ public class OrderServiceImpl implements OrderService {
         return null;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<OrderListResponse> getAllOrders(Pageable pageable) {
+        log.info("Admin l?y t?t c? don hng h? th?ng");
+        return orderRepository.findAll(pageable)
+                .map(this::toListResponse);
+    }
+
     // ==================== PRIVATE METHODS ====================
 
     private OrderDetailResponse toDetailResponse(Order order) {
@@ -400,9 +476,22 @@ public class OrderServiceImpl implements OrderService {
                 .recipientName(order.getRecipientName())
                 .recipientPhone(order.getRecipientPhone())
                 .paymentMethod(order.getPaymentMethod())
+                .voucherCode(order.getVoucher() != null ? order.getVoucher().getCode() : null)
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
-                .items(items)
+                .items(order.getItems().stream()
+                        .map(item -> OrderDetailResponse.OrderItemDTO.builder()
+                                .id(item.getId())
+                                .productId(item.getProduct().getId())
+                                .productName(item.getProduct().getName())
+                                .variantId(item.getVariant() != null ? item.getVariant().getId() : null)
+                                .variantName(item.getVariant() != null ? item.getVariant().getAttributes() : null)
+                                .variantAttributes(item.getVariant() != null ? item.getVariant().getAttributes() : null)
+                                .quantity(item.getQuantity())
+                                .unitPrice(item.getUnitPrice())
+                                .totalPrice(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                                .build())
+                        .collect(Collectors.toList()))
                 .build();
     }
 

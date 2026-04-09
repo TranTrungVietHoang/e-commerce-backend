@@ -45,7 +45,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             throw new IllegalArgumentException("Không tìm thấy email từ nhà cung cấp OAuth2");
         }
 
-        Optional<User> userOptional = userRepository.findByEmail(email);
+        Optional<User> userOptional = userRepository.findFirstByEmail(email);
         User user;
         if (userOptional.isPresent()) {
             user = userOptional.get();

@@ -84,7 +84,7 @@ public class UserService {
     }
 
     private User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
+        return userRepository.findFirstByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
@@ -96,7 +96,7 @@ public class UserService {
         // Lấy shopId nếu user là seller
         Long shopId = null;
         if (roles.contains("ROLE_SELLER")) {
-            shopId = shopRepository.findBySellerId(user.getId())
+            shopId = shopRepository.findFirstBySellerId(user.getId())
                     .map(shop -> shop.getId())
                     .orElse(null);
         }

@@ -68,7 +68,7 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse login(LoginRequest request) {
         log.info("Đang xử lý đăng nhập cho email: {}", request.getEmail());
         
-        User user = userRepository.findByEmail(request.getEmail())
+        User user = userRepository.findFirstByEmail(request.getEmail())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Sai email hoặc mật khẩu"));
                 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -95,7 +95,7 @@ public class AuthServiceImpl implements AuthService {
 
         // If user is a seller, fetch their shop ID
         if (roleNames.contains("ROLE_SELLER")) {
-            Optional<Shop> shop = shopRepository.findBySellerId(user.getId());
+            Optional<Shop> shop = shopRepository.findFirstBySellerId(user.getId());
             if (shop.isPresent()) {
                 builder.shopId(shop.get().getId());
             }
@@ -114,7 +114,7 @@ public class AuthServiceImpl implements AuthService {
 
         String email = jwtUtil.extractUsername(request.getRefreshToken());
         
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findFirstByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND, "Người dùng không tồn tại"));
 
         String newAccessToken = jwtUtil.generateAccessToken(user);
@@ -136,7 +136,7 @@ public class AuthServiceImpl implements AuthService {
 
         // If user is a seller, fetch their shop ID
         if (roleNames.contains("ROLE_SELLER")) {
-            Optional<Shop> shop = shopRepository.findBySellerId(user.getId());
+            Optional<Shop> shop = shopRepository.findFirstBySellerId(user.getId());
             if (shop.isPresent()) {
                 builder.shopId(shop.get().getId());
             }

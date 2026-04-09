@@ -40,7 +40,8 @@ public class SearchServiceImpl implements SearchService {
         // Ghép các điều kiện lọc bằng Specification
         Specification<Product> spec = Specification
                 .where(ProductSpecification.isActive())
-                .and(ProductSpecification.isApproved()) // <--- Thêm chỉ lấy sản phẩm đã duyệt
+                .and(ProductSpecification.isApproved())
+                .and(ProductSpecification.isShopApproved()) // <--- Chặn sản phẩm của shop bị khóa
                 .and(ProductSpecification.hasKeyword(keyword))
                 .and(ProductSpecification.hasCategoryId(categoryId))
                 .and(ProductSpecification.hasMinPrice(minPrice))

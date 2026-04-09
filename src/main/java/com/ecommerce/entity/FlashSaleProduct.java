@@ -20,10 +20,12 @@ public class FlashSaleProduct {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "flash_sale_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("products") // Bỏ qua mảng products của FlashSale
     private FlashSale flashSale;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"shop", "category", "images", "variants"}) // Giảm bớt tải DTO
     private Product product;
 
     @Column(name = "flash_sale_price", nullable = false, precision = 18, scale = 2)

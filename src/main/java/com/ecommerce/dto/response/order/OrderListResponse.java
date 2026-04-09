@@ -16,6 +16,5 @@ public class OrderListResponse implements Serializable {
     private Integer itemCount;
     private BigDecimal totalAmount;
     private String status; // PENDING, CONFIRMED, SHIPPING, DELIVERED, CANCELLED
-    @JsonFormat(pattern = "dd/MM/yyyy HH:mm")
     private LocalDateTime createdAt;
 }
